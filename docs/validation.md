@@ -1,0 +1,63 @@
+# Validation
+
+Evidence reviewed on 2026-10-10. Native trials use isolated disposable fake ships or fresh comets, never an operator's existing pier or identity key. Cross-built artifacts and simulated browser tests are recorded separately from native acceptance.
+
+| Target | Evidence | Remaining |
+| --- | --- | --- |
+| macOS ARM64 | M2 Max/32 GiB: native Vere boot/login/Dojo, full export/restore, 4.5→4.6 update, full replay, three maintenance passes, LaunchAgent graceful utility shutdown, confirmed/uncertain Pack recovery windows. New native comet: authenticated login, stop/start, Pack/Roll/Chop, export/restore/replay, actual browser Dojo/Open and desktop/mobile accessibility. | Valid disposable-key onboarding, real-identity migration, representative active ships, broader first-boot failure windows. |
+| Linux ARM64 | Raspberry Pi 4/8 GB: native service/UI, Mac export restore/login, 4.5→4.6 update/replay, maintenance and due schedule, systemd graceful utility shutdown, Pack interruption holds and fresh restored-folder login. Shared map policy: isolated folder import, two manual restarts, automatic startup, post-Pack restart and oversized-import refusal; actual process mappings and authenticated login checked. | Fresh comet boot/login, stop/start, Pack/Roll/Chop and export/restore passed after the earlier virgin-map fix. A default-map/loom collision is now reproduced independently; the original failed processes were not traced. Full comet replay acceptance, physical drive, valid disposable keys, real identities, larger active ships and broader failures remain open. |
+| macOS x86_64 | Binary cross-compilation. | Native execution and lifecycle acceptance. |
+| Linux x86_64 | Binary cross-compilation. | Native execution and lifecycle acceptance. |
+
+The Pi's virgin 4.5 fixture bootstrap needed a retry with a smaller upstream LMDB mapping after an out-of-memory failure. Later ordinary Harbor starts/update/replay passed. That fixture setup is not default onboarding acceptance. Successful paths do not establish every power-loss, forced-kill or filesystem-failure outcome.
+
+Private HTTP access-code login/privacy and deliberate early HTTP disconnects passed on native Mac/Pi. The former socket reader is confined to tests after an upstream early-close crash was reproduced; production has no socket fallback. Recovery verification releases confirmed utility exits to persistent Stopped, while unknown outcomes remain held.
+
+Storage guards passed mounted/missing/replacement APFS image cases on macOS and real kernel mount/UUID/missing/unmounted/wrong-UUID cases on the Pi. No fallback state was created. These checks do not certify USB disconnects, enclosure/power failures or actual external-drive performance.
+
+The demo's LAN/Tailscale HTTP reachability, host-correct **Open ship**, enabled user service and graceful restart were verified. Reboot behavior was not exercised. Browser-close independence is provided by service architecture; foreground termination still stops owned ships.
+
+## Automated checks
+
+Routine commands:
+
+```sh
+npm --prefix web ci
+HARBOR_GO=go scripts/build.sh
+go test -race ./...
+go vet ./...
+npm --prefix web run typecheck
+npm --prefix web run test
+PLAYWRIGHT_BROWSERS_PATH="$PWD/.tools/playwright" npx --prefix web playwright install chromium
+npm --prefix web run test:e2e
+```
+
+The Go race suite, vet, TypeScript check and frontend unit suite passed in the publication audit. Fixture browser checks cover onboarding, landing, sigils, clipboard, maintenance/schedules, API failures and desktop/mobile layouts. Live Pi browser tests are opt-in through `HARBOR_BROWSER_URL`; skipped opt-in tests are not passing live proof. Current advisory checks are recorded in the readiness report, not inferred from a green unit suite.
+
+The clean source archive was extracted independently, installed from its lockfile, rebuilt and checked again with race/vet/typecheck/unit tests. Its embedded production UI opened onboarding for an empty real registry and reached existing-folder setup, with no recorded browser errors. The isolated service stopped with exit 0. This checks a fresh source installation, not real ship boot or installer replacement. An initial port-0 smoke attempt exposed a configuration issue; the fixed-port retry passed. The Pi was only inspected read-only during publication preparation; no new Pi ship fixtures or deployments were created.
+
+Native integration tests require explicit disposable paths/flags and some destructive interruption tests require the `harbor_chaos` tag. Never point them at a real identity. Raw reports, fixtures, reference screenshots and development notes are private local evidence and excluded from source/release bundles. Public claims above summarize the verified boundary without publishing personal paths, addresses or credentials.
+
+## Release acceptance
+
+An experimental source release can invite testing with explicit limitations. A stable release needs native acceptance on all four targets, full key/comet onboarding and real-identity migration, physical external-storage trials, representative resource profiles, accessibility checks and a usable signed macOS distribution. See [release readiness](release-readiness.md).
+
+## Readiness follow-through — 2026-10-10
+
+A fresh real comet booted through the production Mac ARM64 API and passed authenticated HTTP login. Its first early stop timed out and Harbor exited 1; that trial remains a preserved failure-window record. A separate rebuilt native trial passed stop/start, Pack/Roll/Chop, full export and archive restore. Replay correctly refused without a checkpoint belonging to the restored registration; after exporting that registration, replay/login and final graceful stop passed with service exit 0. This distinguishes a missing trial prerequisite from a product failure.
+
+The actual restored ship also passed browser Dojo input `(add 5 6)`, the observed result `11`, host-correct Open ship, axe checks across three panels at desktop/mobile widths and visual screenshot inspection. Eight fixture screens passed automated accessibility/reflow/44px-control checks at 1280, 390 and 320 pixels. Human screen-reader/physical-touch acceptance remains separate.
+
+The Pi virgin comet acquired an identity but failed opening initial LMDB metadata with `Out of memory`; the manager exited cleanly and preserved the pier/logs. This is default onboarding evidence, unlike older seeded fixtures. The controlled 64 GiB map passed bootstrap/login, graceful stop and a normal default-map restart. The earlier first-boot-only fix then passed the actual Harbor API: fresh comet, authenticated login, stop/start, Pack/Roll/Chop, full export and native archive restore. Replay exited 0, but its immediate restart reported `MDB_CORRUPTED`; copies of the post-replay pier booted with and without runtime locks. Original/checkpoint evidence is preserved. Failed post-utility restarts create durable holds; a helper-process regression verifies that preservation independently of the upstream failure.
+
+Further isolated Vere 4.6 trials reproduced the startup fault in one of 16 default-map starts. A system-call trace and core analysis showed the fixed loom mapping replacing part of a live 500 GiB LMDB mapping and an adjacent allocator buffer. Independent read-only scans of the archived databases passed. Sixteen control starts with a 64 GiB map passed without overlap. This establishes the mechanism in a disposable fixture; the original live failure was not traced.
+
+Harbor selects a map on every ship launch across all four supported macOS/Linux targets, with no architecture-specific trigger. It measures the largest metadata or epoch database by logical file size and chooses at least twice that size, rounded up to a power of two with a 64 GiB minimum. Separate epochs are not summed. The former 32 GiB database cutoff is removed; unsafe/uncheckable storage and sizes that cannot be represented with growth headroom are refused. Selection is repeated on each start, without resizing a running ship.
+
+Focused regressions cover threshold boundaries, independent epochs, repeated-start growth, unsafe storage, cancellation and integer overflow. Isolated Harbor API trials on Mac ARM64 and Pi ARM64 each passed folder registration at 64 GiB, manual restarts selecting 128 GiB for a 40 GiB database and 256 GiB for a 100 GiB database, controller restart/autostart and post-Pack restart at 256 GiB. Authenticated login and actual process mappings without loom overlap were checked at all five starts on each host. The larger fixtures were valid database copies extended with sparse trailing space; they establish selection and native startup, not representative populated large-ship workload acceptance. A symlinked database import failed before any Vere process launched. Both test managers exited cleanly and their fixtures were removed; the Pi fixtures ran only in RAM. The lifecycle trials did not change the live Pi service or pier. Intel binaries cross-compiled; native Intel lifecycle acceptance remains open. Larger mappings can exceed a host's available address space, and the policy does not eliminate the upstream overlap bug. This is a startup workaround, not an integrity repair or renewed full comet replay acceptance. Utility arguments remain unchanged; Vere 4.6's `play` and `prep` subcommands do not accept this flag.
+
+Retention regressions cover referenced uploads, pending imports, active jobs, recovery holds, minimum export retention with current integrity checks, corruption/changed-checkpoint refusal, canonical controller aliases, unknown files, changed/symlink targets, preview/apply and budget refusal. A separate CLI smoke check removed only expired disposable inputs after preview and preserved an unknown file. The live controller lock refused cleanup. No operator archive cleanup was performed.
+
+No native Intel host, physical external drive or valid disposable boot key was available for this run. Developer ID distribution credentials were unavailable. Native CI and a signed-installer path are prepared, but those acceptance gates remain open.
+
+The [LMDB workaround maintenance note](lmdb-mapping-workaround.md) relates the adaptive policy to the [POSIX loom investigation](upstream/vere-loom-reservation-proposal.md), distinguishes ship-start coverage from utility processes, and defines the upstream ownership, native validation and default-capacity evidence required before retirement. Passing Harbor's selector tests alone does not establish those retirement gates.

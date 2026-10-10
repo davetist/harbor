@@ -1,0 +1,6 @@
+import type { Ship } from '../model'
+import { Arrow, State, Wordmark } from '../components'
+import { ShipSigil } from '../ShipSigil'
+export function Ships({ ships, manage, add, action }: { ships: Ship[]; manage: (id: string) => void; add: () => void; action: (ship: Ship) => void }) {
+  return <section className="home"><aside><Wordmark/><button className="add-ship" onClick={add}>Add a ship <span aria-hidden="true">+</span></button></aside><div className="ship-list"><h1>Your ships</h1>{ships.map(ship => <div className="ship-row" key={ship.id}><div className="ship-identity"><ShipSigil ship={ship}/><div className="ship-label"><span className="ship-name">{ship.nickname || ship.name}</span><State value={ship.state}/></div></div><div className="ship-actions"><button className="text-button" aria-label={`Manage ${ship.name}`} onClick={() => manage(ship.id)}>Manage</button><button disabled={!['running','stopped'].includes(ship.state) || ship.recoveryBlocked} aria-label={`${ship.state === 'running' ? 'Open' : 'Start'} ${ship.name}`} onClick={() => action(ship)}>{ship.state === 'running' ? 'Open' : ship.state === 'starting' ? 'Starting' : 'Start'} <Arrow/></button></div></div>)}{ships.length === 0 && <p className="muted">Your ships will appear here.</p>}</div></section>
+}

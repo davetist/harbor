@@ -1,0 +1,24 @@
+import { Export } from './Export'
+import { useEffect, useRef, useState } from 'react'
+import type { HarborClient, Operation, Schedule, Ship } from '../model'
+import { ErrorMessage, operationNames } from '../components'
+export const scheduleTime = (nextDue: string, timezone: string) => new Date(nextDue).toLocaleString(undefined, { timeZone: timezone })
+const descriptions: Record<string, string> = { pack: 'Defragment ship state', meld: 'Deduplicate ship state', roll: 'Create a new event-log epoch', chop: 'Keep the newest two event-log epochs' }
+export function Maintenance({ ship, client, run, busy }: { ship: Ship; client: HarborClient; run: (op: Operation) => void; busy: boolean }) {
+  const [schedules, setSchedules] = useState<Schedule[]>([]); const [editing, setEditing] = useState<string | null>(null); const [error, setError] = useState('')
+  const editingRef = useRef(editing); editingRef.current = editing
+  useEffect(() => { let alive = true
+    const refresh = () => { client.schedules(ship.id).then(next => { if (alive) setSchedules(previous => next.map(row => previous.find(draft => draft.id === row.id && draft.id === editingRef.current) || row)) }).catch(e => { if (alive) setError(e.message) }) }
+    refresh(); const unsubscribe = client.subscribe?.(refresh)
+    return () => { alive = false; unsubscribe?.() }
+  }, [client, ship.id, busy])
+  const change = (id: string, data: Partial<Schedule>) => setSchedules(rows => rows.map(row => row.id === id ? { ...row, ...data } : row))
+  async function save(schedule: Schedule) { try { await client.saveSchedule(schedule); editingRef.current = null; setEditing(null); setSchedules(await client.schedules(ship.id)); setError('') } catch (e) { setError(e instanceof Error ? e.message : 'Unable to save this schedule.') } }
+  return <div className="maintenance"><div className="section-intro"><h2>Quietly taken care of.</h2><p>Run an operation now, or let Harbor keep a schedule.</p></div><ErrorMessage message={error}/>
+    {schedules.map(schedule => <div className="maintenance-row" key={schedule.id}><div className="operation-summary"><div><h3>{operationNames[schedule.kind]}</h3><p>{descriptions[schedule.kind]}</p></div><div className="operation-right"><button className="schedule-summary" aria-label={`Configure ${operationNames[schedule.kind]}`} aria-expanded={editing === schedule.id} onClick={() => setEditing(editing === schedule.id ? null : schedule.id)}>{schedule.enabled ? `Every ${schedule.intervalDays} ${schedule.intervalDays === 1 ? 'day' : 'days'}` : 'Paused'} <span>⌄</span></button><button disabled={busy || ship.recoveryBlocked} aria-label={`Run ${operationNames[schedule.kind]} now`} onClick={() => run(schedule.kind)}>Run <span aria-hidden="true">→</span></button></div></div>
+      {editing === schedule.id && <div className="schedule-editor"><div className="schedule-fields"><label>Every (days)<input type="number" min="1" max="365" aria-label={`${operationNames[schedule.kind]} interval in days`} value={schedule.intervalDays} onChange={e => change(schedule.id, { intervalDays: Number(e.target.value) })}/></label><label>Start time<input type="time" value={schedule.localTime} onChange={e => change(schedule.id, { localTime: e.target.value })}/></label><label className="checkbox"><input type="checkbox" checked={schedule.enabled} onChange={e => change(schedule.id, { enabled: e.target.checked })}/>Enabled</label></div><p className="field-note">Next: {schedule.nextDue ? scheduleTime(schedule.nextDue, schedule.timezone) : 'Not scheduled'} · {schedule.timezone} · {schedule.lastResult || 'Never run'}{['roll', 'chop'].includes(schedule.kind) && ' · Roll and Chop share this cadence.'}{schedule.kind === 'chop' && ' Keeps two epochs and removes older replay history after its paired Roll.'}</p><button onClick={() => save(schedule)}>Save schedule</button></div>}
+    </div>)}
+    <p className="maintenance-note">Maintenance restores the ship’s previous running state. Pier export leaves it stopped. Interrupted work stays visible.</p>
+    <details className="advanced"><summary>Runtime & recovery</summary><div className="recovery-actions"><button disabled={busy} onClick={() => run('update')}>Update runtime →</button><button disabled={busy} onClick={() => run('backup')}>Export pier →</button></div><p className="field-note">Export stops this ship and leaves it stopped.</p><p className="field-note">Keep the source stopped when importing on another device. If you restart it, create a fresh export before moving.</p><Export shipId={ship.id} client={client}/><p className="field-note">Replay requires a verified full-pier export.</p><button disabled={busy} onClick={() => { if (window.confirm('Replay rebuilds ship state from event history. Harbor will require a verified pier export. Continue?')) run('replay') }}>Replay state →</button></details>
+  </div>
+}

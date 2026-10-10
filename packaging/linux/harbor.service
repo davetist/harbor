@@ -1,0 +1,17 @@
+[Unit]
+Description=Harbor Urbit ship runner
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=HARBOR_BINARY serve --config HARBOR_CONFIG
+WorkingDirectory=HARBOR_DIRECTORY
+Restart=on-failure
+RestartSec=5
+KillSignal=SIGTERM
+KillMode=process
+TimeoutStopSec=infinity
+UMask=0077
+
+[Install]
+WantedBy=default.target

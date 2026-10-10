@@ -1,33 +1,43 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# Test binary, built with `go test -c`
+.tools/
+.harbor-work/
+node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+internal/ui/dist/
+output/
+data/
+dist/
+/harbor
 *.test
-
-# Code coverage profiles and other test artifacts
 *.out
-coverage.*
-!coverage.go
 *.coverprofile
-profile.cov
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
+coverage.*
 go.work
 go.work.sum
-
-# env file
+*.log
+.DS_Store
+*.tsbuildinfo
 .env
-
-# Editor/IDE
-# .idea/
-# .vscode/
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.sqlite
+*.sqlite-*
+*.db
+*.mdb
+*.pill
+*.core
+*.tar.gz
+*.tgz
+**/.urb/
+**/.vere.lock
+__pycache__/
+*.pyc
+# Machine-bound disposable measurement tooling; not part of the public source.
+scripts/measure-maintenance.sh
+scripts/maintenance-probe/
+.playwright/
+.playwright-cli/

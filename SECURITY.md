@@ -1,0 +1,15 @@
+# Security policy
+
+Harbor is an experimental single-user Urbit runner for trusted local networks and externally managed tailnets. It has no separate login or client/ship isolation: every admitted control client has operator authority over all registered ships. Public hosting, untrusted tenants, public reverse proxies and router port forwarding are unsupported.
+
+The control listener validates Host and browser mutation origins without classifying client or interface IP ranges. Network access is determined by the configured listener and external firewall, router or tailnet policy. Harbor's Host and origin checks do not cover Vere's separate ship HTTP listener. See [configuration](docs/installation.md#network-access).
+
+The service and Vere run with the same OS user's authority. `allowedRoots` is a pier path policy, not a subprocess sandbox. Full archives contain private state and are unencrypted. Runtime downloads are pinned to official catalog digests. Storage UUID pins protect startup against an absent/replaced mount; they do not guarantee hot-unplug or power-loss recovery.
+
+Security review should focus on untrusted browser/archive/path input crossing into filesystem, process or control authority; exclusive writers and signaling; bounded parsing/work; private key/code handling; runtime integrity; origin/Host checks; and recovery guarantees. Root/service-account compromise and intentionally authorized Dojo commands are outside this boundary. Dependency advisories and private-file retention still require maintenance even when no crossing is established.
+
+Only the current experimental branch is maintained; no stable support window or response SLA is promised. Known publication blockers and validation limits are tracked in [release readiness](docs/release-readiness.md).
+
+Use GitHub's private [Report a vulnerability](https://github.com/davetist/harbor/security/advisories/new) form, under **Security → Report a vulnerability**. Do not publish credential values or exploit-bearing ship state in public issues.
+
+Include affected version/platform, the trust boundary, minimal reproduction using synthetic/disposable data, impact and any proposed fix. Never attach identity keys, access codes, real piers, cookies or private logs. The maintainer should acknowledge, reproduce safely, preserve a focused regression and coordinate disclosure before public release of an exploit.

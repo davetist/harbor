@@ -1,0 +1,207 @@
+{
+  "preparedDate": "2026-10-10",
+  "scope": "Sanitized summary of completed independent fake-pier trials; no patched runtime was tested and no archive is distributed with this file.",
+  "runtime": {
+    "version": "Vere 4.6",
+    "artifact": "linux-aarch64/vere",
+    "sha256": "be1957294c565d83af24edae07754f1fbd76e603497c56eb149b98add963b3c8"
+  },
+  "fixture": {
+    "identity": "~bus",
+    "archiveSha256": "f07c5aa50dc2a6a34c6da1816dfc187629e0e23ec197479674a07ecea58e1938",
+    "archiveBytes": 367834313,
+    "epoch": "0i154",
+    "snapshotBytes": 762478592,
+    "osPageBytes": 4096,
+    "lmdbPageBytes": 4096,
+    "loomBytes": 2147483648,
+    "archivePublished": false,
+    "uncompressedFileBytes": 1722211632
+  },
+  "launch": {
+    "ptyRows": 24,
+    "ptyColumns": 100,
+    "TERM": "dumb",
+    "commonArguments": [
+      "--no-dock",
+      "--exit",
+      "--loom",
+      "31",
+      "--http-ip",
+      "127.0.0.1",
+      "--http-port",
+      "18999",
+      "<disposable-fake-pier>"
+    ],
+    "controlAdditionalArguments": [
+      "--lmdb-map-size",
+      "68719476736"
+    ]
+  },
+  "series": {
+    "default": {
+      "mapBytes": 536870912000,
+      "trials": 16,
+      "failedTrials": [
+        4
+      ],
+      "overlapTraces": [
+        "trace-04"
+      ],
+      "lockModes": {
+        "archivedLockFiles": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "freshLockFiles": [
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    },
+    "control": {
+      "mapBytes": 68719476736,
+      "trials": 16,
+      "failedTrials": [],
+      "overlapTraces": [],
+      "lockModes": {
+        "freshLockFiles": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ]
+      }
+    },
+    "comparisonLimit": "Default trials mix archived and fresh lock files; all 64 GiB controls used fresh lock files. These groups do not isolate the effect of map size. The syscall trace and core independently establish the overwrite mechanism.",
+    "groups": [
+      {
+        "mapBytes": 536870912000,
+        "lockMode": "archived",
+        "trials": 8,
+        "failedTrials": [
+          4
+        ],
+        "overlapTraces": [
+          "trace-04"
+        ]
+      },
+      {
+        "mapBytes": 536870912000,
+        "lockMode": "fresh",
+        "trials": 8,
+        "failedTrials": [],
+        "overlapTraces": []
+      },
+      {
+        "mapBytes": 68719476736,
+        "lockMode": "fresh",
+        "trials": 16,
+        "failedTrials": [],
+        "overlapTraces": []
+      }
+    ]
+  },
+  "collision": {
+    "trial": 4,
+    "workerPID": 23748,
+    "lmdbStart": "0x27bc2f000",
+    "lmdbLengthBytes": 536870912000,
+    "loomStart": "0x200000000",
+    "loomEndExclusive": "0x280000000",
+    "overwrittenLmdbBytes": 71110656,
+    "adjacentAnonymousStart": "0x27bc2b000",
+    "adjacentAnonymousBytes": 16384,
+    "cleanupFreePointer": "0x27bc2b0b0",
+    "survivingLmdbStart": "0x280000000",
+    "survivingLmdbFileOffset": "0x43d1000"
+  },
+  "traceExcerpt": [
+    "23748 mmap(NULL, 536870912000, PROT_READ, MAP_SHARED, 16, 0) = 0x27bc2f000",
+    "23748 mmap(NULL, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x27bc2b000",
+    "23748 mmap(0x200000000, 2147483648, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x200000000"
+  ],
+  "errorExcerpt": [
+    "lmdb: meta read: dbi_open fail: MDB_CORRUPTED: Located page was wrong type",
+    "disk: read meta: no identity",
+    "mars: disk meta fail",
+    "loom: external fault: 0x10 (0x200000000 : 0x280000000)"
+  ],
+  "cleanupBacktrace": [
+    "get_meta",
+    "__libc_free(p=0x27bc2b0b0)",
+    "free",
+    "mdb_env_close0",
+    "mdb_env_close",
+    "u3_lmdb_exit",
+    "u3_disk_exit"
+  ],
+  "inputValidation": "All three archived LMDB databases were read fully through MAIN/META and EVENTS where present with the exact pinned upstream library; hashes unchanged.",
+  "proofLimits": [
+    "No direct trace or pre-failure offline copy of the live ship was available.",
+    "Controls validate startup and clean exit on a synthetic fixture, not every utility, large database, hardware fault or real-identity migration.",
+    "The live pier received only bounded structural samples and HTTP/status reads; no full live integrity check or repair was performed."
+  ],
+  "upstreamSnapshot": "5faf531e26512585c4c0004598dfa7005278e1cf",
+  "historicalSourceSha256": {
+    "trace-04": "9f52f4b6a50563e62c3bf85cfbfbf85e7560d3641f770b93946e5596d5841b88",
+    "core-analysis.json": "03f48802b76b805a7b00835bc8174ecc9f6b1c05d7766cb077c4c43ad4dd804b",
+    "trace-analysis.json": "1f834a83cc7e40e02ee8b779d24be4377e91670c5ad96f23e402cf61ca9dce09",
+    "results.json": "7041f77264e9188a5fc839ec55da273d39207798cd8ced9d4cb357f3816f4546",
+    "control-results.json": "dfb59992f0876f9c940522084e36769284d0e673bd27cb3dbd73394848944dae",
+    "offline-db-check.json": "bf4ca9092b4ed8a3f301b18c1b427ef2e19861fceaf9476efe8e9da8bb95f71e"
+  },
+  "environment": {
+    "kernelRelease": "6.18.50+rpt-rpi-v8",
+    "os": "Debian GNU/Linux 13 (trixie)",
+    "architecture": "aarch64",
+    "osPageBytes": 4096,
+    "CONFIG_ARM64_VA_BITS": 39,
+    "CONFIG_ARM64_4K_PAGES": "y",
+    "metadataObservedUTC": "2026-10-10T15:39:33.029976+00:00",
+    "bootUTC": "2026-10-07T21:07:40.550094+00:00",
+    "metadataBoundary": "Read-only metadata captured after the trials, on a kernel boot preceding them. The original traces and musl mallocng core frames remain the runtime evidence; exact musl version was not recorded."
+  },
+  "supportFiles": {
+    "vere-loom-collision-trace.txt": {
+      "sha256": "c29e9cf53bbebcd3de7c1f74c1f127d6ac59ad95b73762e8b0b6d9bbbc519985",
+      "bytes": 233015
+    },
+    "vere-loom-collision-core.txt": {
+      "sha256": "dfa4124ec6abfb63d6966e1e10b631ac021ecc21945ba1b7ec1913ecdcf94e2f",
+      "bytes": 2545
+    },
+    "vere-loom-fixture.md": {
+      "sha256": "d312b84d8b354fb6afa20c5bb5cd5cbe844b221a7cb29b1cc0b50a5bfc5a017d",
+      "bytes": 7867
+    },
+    "vere-loom-pty.py": {
+      "sha256": "d0e4acab2ed3e858c784347c85ddfc37be2c6d1844a7ae2123d5f18bfed426ec",
+      "bytes": 3536
+    }
+  }
+}

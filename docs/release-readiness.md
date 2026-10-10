@@ -1,0 +1,46 @@
+# Publication readiness — 2026-10-10
+
+Harbor is a working experimental runner with stronger native evidence on ARM64 than on Intel. It is not ready to claim stable support or safe real-identity migration. The source publication destination is [davetist/harbor](https://github.com/davetist/harbor). Binary candidates remain local and unsigned; no public binary release has been published.
+
+## Before an experimental publication
+
+| Item | Status |
+| --- | --- |
+| MIT license and third-party notices | MIT selected; notice collection now fails on missing module/package license texts. |
+| Public documentation | Rewritten around Port-inspired easy Urbit onboarding. Personal screenshots, raw test records and historical plans are preserved privately outside the public tree. |
+| Dependency advisories | Vitest upgraded to 5.0.3. Refreshed npm audit: zero advisories, including development dependencies. Official Go vulnerability checker: no reachable vulnerabilities found. This is a dated check. |
+| Source/binary packages | Initial clean source and four OS/CPU candidates passed checksums, notices, clean-source rebuilding and real empty-registry UI/shutdown checks. The archive-validation fix is included in refreshed `0.1.0-alpha.2` candidates; the earlier candidates are superseded. Cross-compilation remains separate from native acceptance. |
+| CI | Native Go checks on all four OS/CPU runners and browser fixture checks configured. Current hosted results are available in [Checks](https://github.com/davetist/harbor/actions/workflows/ci.yml). These routine checks do not run the opt-in native ship lifecycle trials. |
+| Security review | The reported archive symlink-chain issue is fixed: scan-local resolved suffixes eliminate repeated traversal; post-read validation observes cancellation. Long-chain/shared-suffix, cancellation, cycle/missing-target/integrity controls and real archive restore regressions pass. Full Go race/vet checks and an independent patch review passed. The original security report remains a historical snapshot, not a review of later changes. |
+| Public repository and reporting | Source publication targets [davetist/harbor](https://github.com/davetist/harbor), with GitHub private vulnerability reporting linked in [SECURITY.md](../SECURITY.md). Public access and the reporting setting are verified during publication. |
+
+## Improvements before stable release
+
+1. Complete native Intel execution and valid disposable-key onboarding on every target. Mac ARM64 now has real comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and browser proof; an early first-boot stop timed out and remains a failure-window gate. Pi comet onboarding, Pack/Roll/Chop and export/restore passed. Its replay restart reported LMDB corruption; an independent fixture subsequently reproduced a default-map/loom collision. Adaptive mappings now apply to every ship launch on all four targets: at least twice the largest database's logical size, rounded up to a power of two with a 64 GiB minimum and recalculated at startup. Native Mac ARM64 and Pi ARM64 folder import, repeated/automatic/post-Pack restart and unsafe-storage refusal passed with actual 64/128/256 GiB mappings. The larger tests used sparse trailing space on valid copies; populated large-ship workloads remain unvalidated and host address-space limits still apply. The policy mitigates the overlap bug but does not fix it upstream. Full comet replay acceptance remains open, and the original failed process was not traced. The [native acceptance tool and four-runner workflow](native-acceptance.md) are prepared; no hosted Intel run has occurred. Real-identity migration remains unvalidated.
+2. Exercise physical external storage, disconnect/power/failure behavior and representative active ships. Current thresholds derive from two hardware configurations and an SD-card baseline.
+3. Execute the [prepared universal signed/notarized macOS installer build](macos-signing.md) using Developer ID credentials, then validate the exact installer on a clean Mac. Credential preflight and shell syntax pass; actual signing/notarization remains unexecuted. Current installs still require configuration and deliberate service/binary replacement; no `.app` wrapper or Harbor self-updater exists.
+4. Explicit [retention preview/apply controls and logical/allocated disk accounting](retention.md) are implemented and tested. Age thresholds, a minimum of currently integrity-checked exports, a cleanup budget and job/recovery protections apply only with Harbor stopped. Canonical folder aliases share the controller lock. Live quotas and automatic archive eviction remain open. Startup key cleanup now preserves referenced keys.
+5. Storage-location clarity is fixed: the host API distinguishes manager `dataDir`, default `pierRoot` and `allowedRoots`. Onboarding uses the permitted pier destination.
+6. Keyboard focus, arrow/Home/End tab behavior, tab/panel associations, selected upload mode, contrast and 44px control targets are improved. Automated WCAG checks pass across eight fixture screens at 1280/390/320px and three actual native ship panels at desktop/mobile widths. Actual Dojo/Open interaction and desktop/mobile screenshot inspection pass. Human screen-reader/physical-touch acceptance and other failure/recovery states remain open; this is not a claim of complete WCAG conformance.
+7. Failed post-utility restarts now persist recovery holds, preventing unattended restart and protecting checkpoints. Expand graceful/forced shutdown, corruption and recovery windows without weakening those holds. A green routine suite does not certify upstream Vere or every OS service-manager outcome.
+8. Ephemeral listeners are fixed: port-zero configuration now uses the assigned port for Host validation while preserving wildcard/private-interface rules. Loopback/wildcard regressions and actual native service trials pass.
+
+Readiness checks passed: Go race suite and vet, TypeScript, three frontend unit tests, 21 routine browser tests and a separately executed native browser acceptance test. The two legacy fake-ship live tests were skipped; the new native browser test is also opt-in during ordinary routine runs. The refreshed advisory checks found zero npm advisories and no reachable Go vulnerabilities. The production frontend still emits a chunk-size warning (about 599 kB uncompressed main JavaScript); measure startup on slower devices before deciding whether further splitting is useful.
+
+Revisit the [LMDB mapping workaround and retirement criteria](lmdb-mapping-workaround.md) with each runtime catalog change. Retiring collision mitigation requires a released and natively verified upstream address-ownership fix; removing explicit sizing also requires default-capacity/address-space validation on supported hosts. There is no automatic exemption for a newer version.
+
+No authentication, tunnel, certificate, pairing or mount/formatting subsystem is proposed. The intended deployment remains a trusted LAN plus externally managed Tailscale.
+
+## Build and publish procedure
+
+Run routine checks from CONTRIBUTING.md. Release packaging also needs Python 3. Then:
+
+```sh
+HARBOR_GO=go scripts/build-release.sh 0.1.0-alpha.2
+```
+
+The script refuses an existing version directory, creates only its own temporary staging area, and writes `dist/releases/0.1.0-alpha.2/`. It includes four binary archives and an allowlisted source archive. `SHA256SUMS` covers only that version's archives. It neither signs nor publishes them. The manual **Build release candidate** workflow likewise uploads internal CI artifacts; it has read-only repository permissions and creates no public release.
+
+Extract the source archive into a fresh folder, install from its lockfile, rebuild the embedded interface and native binary, run tests, and smoke-test an empty registry with temporary data and loopback ports. Inspect archive contents and notices for missing licenses or private/generated files. Cross-compilation is separate from native ship acceptance.
+
+Review an explicit source allowlist, configure private reporting, run hosted CI and review the exact release assets. Publish only with the experimental limitations visible. Source publication is separate from binary release approval: independently download any published binary archives, verify checksums and repeat the fresh-install flow. Binary publication and those download/install checks remain outstanding.
