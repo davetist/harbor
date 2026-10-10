@@ -13,6 +13,7 @@ Initial experimental Harbor implementation and publication preparation. No publi
 - Default Harbor port 18789, LAN/external-tailnet access and browser-host ship URLs.
 - MIT source license, public documentation, build/check workflows and source/binary packaging.
 - Development dependency advisory remediation. Remaining blockers are listed in release readiness.
+- Require Go 1.27.2 or newer for source builds and hosted workflows, incorporating the patched standard library used by the local validation.
 - Fixed repeated archive symlink-chain validation with a scan-local resolved-path cache and post-read cancellation checks; preserves cycle, missing-target and integrity rejection.
 
 ### Readiness follow-through

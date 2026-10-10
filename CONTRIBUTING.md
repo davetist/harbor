@@ -4,7 +4,7 @@ Harbor aims to make self-hosted Urbit approachable while preserving a quiet, ele
 
 For runtime catalog updates or launch/mapping changes, also read the [LMDB mapping workaround and retirement criteria](docs/lmdb-mapping-workaround.md). A newer Vere version does not automatically establish that the POSIX loom collision is fixed or that its default map fits supported hosts.
 
-Use Go 1.27, Node 24.x and npm. Install with `npm --prefix web ci`, then run `HARBOR_GO=go scripts/build.sh` before Go tests: the generated embedded UI is deliberately excluded from source control. Production starts with `./dist/harbor serve`; `npm --prefix web run dev` serves the separate simulated visual preview at `/preview.html`.
+Use Go 1.27.2 or newer, Node 24.x and npm. Install with `npm --prefix web ci`, then run `HARBOR_GO=go scripts/build.sh` before Go tests: the generated embedded UI is deliberately excluded from source control. Production starts with `./dist/harbor serve`; `npm --prefix web run dev` serves the separate simulated visual preview at `/preview.html`.
 
 Before proposing a change, run:
 

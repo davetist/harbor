@@ -14,7 +14,7 @@ A native Go service runs your ships. You manage them in a browser; closing the b
 
 ## Start Harbor
 
-From a source checkout, install Go 1.27 and Node 24.x, then run:
+From a source checkout, install Go 1.27.2 or newer and Node 24.x, then run:
 
 ```sh
 git clone https://github.com/davetist/harbor.git
