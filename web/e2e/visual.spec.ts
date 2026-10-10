@@ -69,6 +69,7 @@ test('stopped ship can start, terminal is reachable, and all narrow screens fit'
 
 test('primary navigation works from keyboard', async ({ page }) => {
   await page.goto('/preview.html#welcome')
+  await expect(page.getByRole('heading', { name: 'Welcome to Harbor' })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(page.getByRole('button', { name: 'Boot from a keyfile' })).toBeFocused()
   await page.keyboard.press('Enter')
