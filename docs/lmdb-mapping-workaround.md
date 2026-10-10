@@ -10,6 +10,8 @@ The [POSIX loom investigation and proposal](upstream/vere-loom-reservation-propo
 
 The mechanism is unsafe address replacement in Vere. It does not establish that every `MDB_CORRUPTED` report has this cause or that the reproduced failure damaged the database on disk. The original live failure was not traced.
 
+The upstream ownership fix is tracked in [Vere issue #1124](https://github.com/urbit/vere/issues/1124). Publication of the report does not establish a fixed runtime release.
+
 Reducing the LMDB mapping avoided overlap in the tested control series. Harbor uses that mitigation while leaving the upstream fix explicit: Vere must acquire and own the required native and migration loom ranges before other allocations, and must never replace unrelated mappings. `--lmdb-map-size` controls database capacity; it does not enforce this ownership invariant.
 
 The source concern covers the shared POSIX path. Harbor therefore applies one policy to macOS and Linux on ARM64 and x86_64, rather than using Linux ARM64 as a fault detector. The collision was reproduced on Linux ARM64; equivalent runtime failure on the other targets has not been established.

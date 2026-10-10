@@ -10,7 +10,7 @@ A native Go service runs your ships. You manage them in a browser; closing the b
 
 *Visual preview with simulated ships; native validation is documented separately.*
 
-**Experimental alpha.** Native lifecycle testing has passed on Apple Silicon and a Raspberry Pi 4. Fresh comet boot/login is verified on both ARM64 targets. Intel execution, valid identity-key onboarding/migration, physical external-drive failures and the newly observed Pi replay restart failure remain open. Use disposable ships while these acceptance gates are unfinished. See [validation](docs/validation.md) and [release readiness](docs/release-readiness.md).
+**Experimental alpha.** ARM64 boot/login and several lifecycle paths have native evidence on Apple Silicon and a Raspberry Pi 4. A recent disposable Pi comet hit a Pack utility crash and remains recovery-held. Complete Pi replay and utility failure/recovery acceptance remain open, alongside native Intel ship execution, valid identity-key onboarding/migration and physical external-drive failures. Use disposable ships while these acceptance gates are unfinished. See [validation](docs/validation.md) and [release readiness](docs/release-readiness.md).
 
 ## Start Harbor
 

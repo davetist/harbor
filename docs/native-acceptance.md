@@ -25,6 +25,10 @@ Basic acceptance includes the assigned port-zero listener, empty registry, nativ
 
 Failures retain all trial state. Graceful stop is bounded and does not force-kill a ship. Inspect `status.json`, job history and private output; never overwrite/delete a failed pier to make acceptance pass. Check for surviving writers before reusing a trial. First comet bootstrap can take longer than its later restarts; a successful login does not certify every early shutdown window.
 
+Fresh comet acceptance depends on access to the official bootstrap pill. A trial that cannot download it has not exercised LMDB startup or authenticated onboarding. Testing a retained disposable comet is supplemental lifecycle evidence and must be labeled separately.
+
+Keep retained comet fixtures current and run one copy of an identity at a time. A checksum-valid older export can still be refused by Vere with `double-boot detected` and `this is an old version of the ship`: the sponsor may have acknowledged messages ahead of the archived local state. See the [Vere 4.6 boot-state check](https://github.com/urbit/vere/blob/vere-v4.6/pkg/vere/pier.c#L527-L561). Preserve that refusal rather than clearing locks, changing keys or weakening the runtime's guard. Prepare any replacement fixture from the latest verified stopped disposable state; do not substitute it for proof of fresh onboarding.
+
 The manually dispatched **Native disposable comet acceptance** workflow runs the same script on four native runners and uploads only `status.json` for seven days. It has no publishing permissions. Prepared workflow configuration is not hosted/native acceptance evidence until an actual run passes.
 
 ## Physical storage trial

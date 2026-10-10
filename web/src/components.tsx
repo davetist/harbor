@@ -1,6 +1,6 @@
 import type { ShipState } from './model'
 export function Mark({ size = 52 }: { size?: number }) {
-  return <svg width={size} height={size} viewBox="0 0 56 56" fill="none" aria-hidden="true"><circle cx="28" cy="28" r="24.5" stroke="currentColor" strokeWidth="2.5"/><path d="M18 18v13c0 6 4 10 10 10s10-4 10-10V18M12 28h32" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+  return <img className="harbor-mark" src="/harbor-logo.svg" width={size} height={size} alt="" aria-hidden="true"/>
 }
 export function Wordmark() { return <div className="wordmark"><Mark/><span>harbor</span></div> }
 export function Arrow() { return <span aria-hidden="true">→</span> }

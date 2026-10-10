@@ -8,7 +8,7 @@ Harbor is a working experimental runner with stronger native evidence on ARM64 t
 | --- | --- |
 | MIT license and third-party notices | MIT selected; notice collection now fails on missing module/package license texts. |
 | Public documentation | Rewritten around Port-inspired easy Urbit onboarding. Personal screenshots, raw test records and historical plans are preserved privately outside the public tree. |
-| Dependency advisories | Vitest upgraded to 5.0.3. Refreshed npm audit: zero advisories, including development dependencies. Official Go vulnerability checker: no reachable vulnerabilities found. This is a dated check. |
+| Dependency advisories | Vitest upgraded to 5.0.3. Go 1.27.2 is the minimum toolchain; it includes [standard-library security fixes](https://go.dev/doc/devel/release#go1.27.2). Refreshed npm audit: zero advisories, including development dependencies. Official Go vulnerability checker on Go 1.27.2: no reachable vulnerabilities found. This is a dated check. |
 | Source/binary packages | Initial clean source and four OS/CPU candidates passed checksums, notices, clean-source rebuilding and real empty-registry UI/shutdown checks. The archive-validation fix is included in refreshed `0.1.0-alpha.2` candidates; the earlier candidates are superseded. Cross-compilation remains separate from native acceptance. |
 | CI | Native Go checks on all four OS/CPU runners and browser fixture checks configured. Current hosted results are available in [Checks](https://github.com/davetist/harbor/actions/workflows/ci.yml). These routine checks do not run the opt-in native ship lifecycle trials. |
 | Security review | The reported archive symlink-chain issue is fixed: scan-local resolved suffixes eliminate repeated traversal; post-read validation observes cancellation. Long-chain/shared-suffix, cancellation, cycle/missing-target/integrity controls and real archive restore regressions pass. Full Go race/vet checks and an independent patch review passed. The original security report remains a historical snapshot, not a review of later changes. |
@@ -36,10 +36,10 @@ No authentication, tunnel, certificate, pairing or mount/formatting subsystem is
 Run routine checks from CONTRIBUTING.md. Release packaging also needs Python 3. Then:
 
 ```sh
-HARBOR_GO=go scripts/build-release.sh 0.1.0-alpha.2
+HARBOR_GO=go scripts/build-release.sh 0.1.0-alpha.3
 ```
 
-The script refuses an existing version directory, creates only its own temporary staging area, and writes `dist/releases/0.1.0-alpha.2/`. It includes four binary archives and an allowlisted source archive. `SHA256SUMS` covers only that version's archives. It neither signs nor publishes them. The manual **Build release candidate** workflow likewise uploads internal CI artifacts; it has read-only repository permissions and creates no public release.
+The script refuses an existing version directory, creates only its own temporary staging area, and writes `dist/releases/0.1.0-alpha.3/`. It includes four binary archives and an allowlisted source archive. `SHA256SUMS` covers only that version's archives. It neither signs nor publishes them. The manual **Build release candidate** workflow likewise uploads internal CI artifacts; it has read-only repository permissions and creates no public release. An existing candidate directory is immutable; choose a new version after reviewing any further changes.
 
 Extract the source archive into a fresh folder, install from its lockfile, rebuild the embedded interface and native binary, run tests, and smoke-test an empty registry with temporary data and loopback ports. Inspect archive contents and notices for missing licenses or private/generated files. Cross-compilation is separate from native ship acceptance.
 
