@@ -22,7 +22,7 @@ for release_os in darwin linux; do
  for release_arch in amd64 arm64; do
   artifact="harbor-$release_version-$release_os-$release_arch"
   mkdir "$stage/$artifact"
-  CGO_ENABLED=0 GOOS="$release_os" GOARCH="$release_arch" "$build_go" build -trimpath -ldflags "-X main.version=$release_version" -o "$stage/$artifact/harbor" ./cmd/harbor
+  CGO_ENABLED=0 GOOS="$release_os" GOARCH="$release_arch" "$build_go" build -trimpath -buildvcs=false -ldflags "-X main.version=$release_version" -o "$stage/$artifact/harbor" ./cmd/harbor
   cp README.md LICENSE CONTRIBUTING.md SECURITY.md CHANGELOG.md dist/THIRD_PARTY_NOTICES.txt "$stage/$artifact/"
   cp -R docs "$stage/$artifact/docs"
   case "$release_os" in darwin) cp packaging/macos/install.sh packaging/macos/uninstall.sh "$stage/$artifact/";; linux) cp packaging/linux/* "$stage/$artifact/";; esac

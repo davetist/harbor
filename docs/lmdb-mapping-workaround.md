@@ -1,6 +1,6 @@
 # LMDB mapping workaround and retirement criteria
 
-Status recorded on **10 October 2026**: Harbor applies adaptive mapping on every ship launch. The validated runtime is **Vere 4.6**. No fixed upstream release or retirement version has been recorded for this workaround. The policy does not automatically disable itself after a version update.
+Status recorded on **11 October 2026**: Harbor applies adaptive mapping on every ship launch and Pack/Meld/Roll/Chop utility launch. The validated runtime is **Vere 4.6**. No fixed upstream release or retirement version has been recorded for this workaround. The policy does not automatically disable itself after a version update.
 
 Code links in this document resolve in the matching source archive. Binary packages include the documentation and public investigation evidence; obtain the companion source package to inspect the implementation and tests.
 
@@ -37,13 +37,15 @@ The 64 GiB floor comes from the successful control size. Twice the database leng
 
 [Supervisor.launchShip](../internal/supervisor/supervisor.go) selects the map after path, writer and Harbor guard checks, before spawning Vere. It prepends `--lmdb-map-size <bytes>` to the launch arguments. The native trials inspected both the parent and exec-created worker; forwarding to the worker is necessary because it opens the database and maps the loom.
 
+[Executor.maintainWith](../internal/jobs/executor.go) applies the same selection and admission policy to Pack, Meld, Roll and Chop. It remeasures database file lengths for each utility run after validating the registered path, confirming no writer and acquiring the Harbor pier guard, before recording a process launch or spawning Vere. The flags follow the subcommand immediately, for example `pack --lmdb-map-size <bytes> --loom 31 <pier>`. A refused scan releases the guard without recording or spawning a utility process. Replay (`play`) and update preparation (`prep`) retain their original arguments because their Vere 4.6 parsers do not accept this option.
+
 | Path | Adaptive selection applies? |
 | --- | --- |
 | Fresh key/comet boot | Yes, initially 64 GiB. |
 | Existing-folder registration and archive restore startup | Yes, from restored database sizes. |
 | Manual Start and controller automatic startup | Yes, remeasured on each launch. |
 | Ship restart after maintenance, replay or runtime update | Yes, when the executor restarts the ship through the supervisor. |
-| Pack/Meld/Roll/Chop utility process itself | No; utility arguments are unchanged. |
+| Pack/Meld/Roll/Chop utility process itself | Yes, remeasured under the pier guard before each utility launch. |
 | Replay (`play`) and update preparation (`prep`) process itself | No; Vere 4.6's argument parsers do not accept this flag. |
 
 See [BuildArgs](../internal/runtime/args.go) and the [utility executor](../internal/jobs/executor.go). Successful post-utility startup does not establish protection of every utility process. Failed post-utility restarts retain recovery holds and checkpoints.
@@ -63,14 +65,21 @@ The independent Vere 4.6 series had **one overlap failure in 16 default 500 GiB 
 
 Harbor's subsequent native Mac ARM64 and Pi ARM64 trials each verified five starts: folder import at 64 GiB; manual starts selecting 128 GiB for a 40 GiB file and 256 GiB for a 100 GiB file; controller automatic startup at 256 GiB; and post-Pack restart at 256 GiB. Actual database mappings avoided the tested 2 GiB loom range, and authenticated login passed at each start. The larger files were valid copies with sparse trailing space, not populated large-ship workloads. Test managers stopped cleanly and their fixtures were removed; Pi fixtures used RAM storage.
 
-[Runtime regressions](../internal/runtime/lmdb_test.go) cover thresholds, independent epochs, growth between starts, unsafe storage, cancellation and integer overflow. [Supervisor regressions](../internal/supervisor/supervisor_test.go) cover remeasurement and refusal before spawning, including guard release. All four Harbor targets built; native Intel execution, populated large ships, other loom configurations and renewed full comet replay acceptance remain open. See the [validation record](validation.md).
+[Runtime regressions](../internal/runtime/lmdb_test.go) cover thresholds, independent epochs, growth between starts, unsafe storage, cancellation and integer overflow. [Supervisor regressions](../internal/supervisor/supervisor_test.go) cover remeasurement and refusal before spawning, including guard release. All four Harbor targets built; native Intel execution, populated large ships and other loom configurations remain open. See the [validation record](validation.md).
 
-For the local selector/supervisor regressions, with the generated embedded UI already built:
+[Utility regressions](../internal/jobs/lmdb_test.go) execute helper children to check the map flags and their position after each supported subcommand, remeasurement after database growth, unsafe-storage refusal before process recording or spawning, and guard release. They also check that `play` and `prep` retain their original arguments. Meld cases run where the existing resource gate has a measured ARM64 profile; these helper-process checks do not establish native Vere utility acceptance.
+
+The combined alpha.3 Mac/Pi ARM64 candidates separately passed full supplemental stopped-comet lifecycles: all four maintenance commands, verified export/restore/checkpoint replay, authenticated post-replay restart and another manual restart. Native Pack/Meld/Roll arguments were captured; Chop finished before direct capture on both hosts. All Pi authenticated starts and sampled utility maps avoided the tested loom range. The [validation record](validation.md#combined-candidate-acceptance--2026-10-11) distinguishes actual process observations from helper tests and records the exact binary hashes. These successful workflows do not prove upstream address ownership or resolve the earlier untraced Pack crash.
+
+For the local selector, supervisor and utility regressions, with the generated embedded UI already built:
 
 ```sh
 go test ./internal/runtime -run TestLMDBMap -count=1
 go test ./internal/supervisor \
   -run 'TestLaunchRecomputesMapFromDatabaseSize|TestUncheckedLMDBRefusesLaunchAndReleasesGuard' \
+  -count=1
+go test ./internal/jobs \
+  -run 'TestMaintenanceUtility.*|TestReplayAndUpdateUtilitiesKeepOriginalArgs' \
   -count=1
 ```
 

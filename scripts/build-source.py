@@ -29,7 +29,8 @@ files.extend(root / "docs/upstream" / name for name in (
     "vere-loom-collision-trace.txt", "vere-loom-pty.py"))
 # Machine-bound measurement probes remain private lab tooling.
 files.extend(root / "scripts" / name for name in ("build.sh", "build-release.sh",
-                                                "build-source.py", "collect-notices.py", "native-acceptance.py"))
+                                                "build-source.py", "collect-notices.py", "native-acceptance.py",
+                                                "test_native_acceptance.py"))
 files.extend(root / "web" / name for name in ("package.json", "package-lock.json", "tsconfig.json",
                                             "vite.config.ts", "vitest.config.ts", "playwright.config.ts",
                                             "index.html", "preview.html"))

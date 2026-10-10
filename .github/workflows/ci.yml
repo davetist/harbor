@@ -31,6 +31,7 @@ jobs:
       - run: HARBOR_GO=go scripts/build.sh
       - run: go test -race ./...
       - run: go vet ./...
+      - run: python3 scripts/test_native_acceptance.py
       - run: npm --prefix web run typecheck
       - run: npm --prefix web run test
       - run: ./dist/harbor version

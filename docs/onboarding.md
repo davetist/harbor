@@ -12,7 +12,7 @@ A keyfile does not contain your apps, messages or previous pier history. To move
 
 Choose **Try a comet**, choose a local folder label/destination and boot. Vere creates its identity. This is the intended disposable exploration path. Fresh native comet boot/login and stop/start have passed on Mac and Pi ARM64; Intel and valid disposable-key acceptance remain open. Initial mining/bootstrap can take several minutes or longer. On every supported target, Harbor starts new piers with a 64 GiB LMDB virtual map. Existing/imported piers select a map of at least twice the largest database's logical size, rounded up to a power of two with a 64 GiB minimum. It is recalculated on each start to allow growth; this virtual mapping does not allocate that amount of RAM or reserve the loom's addresses. The policy mitigates the measured upstream mapping failure; it does not repair an already corrupt database.
 
-See the [LMDB mapping workaround](lmdb-mapping-workaround.md) for growth and address-space limits, uncovered utility processes and the criteria for retiring it after a verified upstream fix.
+See the [LMDB mapping workaround](lmdb-mapping-workaround.md) for growth and address-space limits, supported maintenance utilities, unsupported replay/update-preparation paths and the criteria for retiring it after a verified upstream fix.
 
 ## Register an existing folder
 

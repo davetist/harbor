@@ -33,7 +33,15 @@ func TestProcessHelper(t *testing.T) {
 	if e != nil {
 		os.Exit(2)
 	}
-	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ready")) }))
+	pierPath := os.Args[len(os.Args)-1]
+	os.WriteFile(filepath.Join(pierPath, ".http.ports"), []byte(port+" insecure loopback\n"), 0600)
+	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			fmt.Fprint(w, `"~zod"`)
+			return
+		}
+		fmt.Fprint(w, "ready")
+	}))
 	go func() {
 		sc := bufio.NewScanner(os.Stdin)
 		for sc.Scan() {

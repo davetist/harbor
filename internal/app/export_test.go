@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"harbor/internal/backup"
 	"harbor/internal/jobs"
 	"harbor/internal/model"
@@ -41,8 +42,13 @@ func TestExportProcessHelper(t *testing.T) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM)
 	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			fmt.Fprint(w, `"~zod"`)
+			return
+		}
 		w.Write([]byte("ready"))
 	}))
+	os.WriteFile(filepath.Join(os.Args[len(os.Args)-1], ".http.ports"), []byte(port+" insecure loopback\n"), 0600)
 	<-ch
 	listener.Close()
 	os.Exit(0)

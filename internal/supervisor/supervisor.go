@@ -21,12 +21,13 @@ import (
 
 type Launcher func(string, ...string) *exec.Cmd
 type child struct {
-	cmd      *exec.Cmd
-	tty      *os.File
-	done     chan struct{}
-	record   model.ProcessRecord
-	release  func()
-	stopping bool
+	cmd          *exec.Cmd
+	tty          *os.File
+	done         chan struct{}
+	record       model.ProcessRecord
+	release      func()
+	stopping     bool
+	initializing bool
 }
 type Supervisor struct {
 	store        *store.Store
@@ -144,7 +145,7 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 	record.PID = cmd.Process.Pid
 	record.StartIdentity, e = StartIdentity(record.PID)
 	record.Phase = "live"
-	c := &child{cmd: cmd, tty: tty, done: make(chan struct{}), record: record, release: release}
+	c := &child{cmd: cmd, tty: tty, done: make(chan struct{}), record: record, release: release, initializing: newDestination}
 	s.mu.Lock()
 	s.children[ship.ID] = c
 	s.mu.Unlock()
@@ -188,11 +189,15 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 			if err != nil {
 				return err
 			}
-			current.State = "running"
-			identityContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			if identity, lookupErr := vr.ReadIdentity(identityContext, current); lookupErr == nil {
-				current.Identity = identity
+			identityContext, cancel := context.WithTimeout(ctx, 10*time.Second)
+			identity, lookupErr := vr.ReadIdentity(identityContext, current)
+			cancel()
+			if lookupErr != nil {
+				continue // Public HTTP can answer while the worker is still initializing.
 			}
+			current.State = "running"
+			current.Identity = identity
+			identityContext, cancel = context.WithTimeout(ctx, 10*time.Second)
 			if capabilities, lookupErr := vr.ProbeCapabilities(identityContext, current.RuntimePath); lookupErr == nil {
 				current.RuntimeVersion = "Vere " + capabilities.Version
 			}
@@ -202,6 +207,11 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 				s.mu.Unlock()
 				return errors.New("runtime exited during readiness")
 			}
+			if c.stopping {
+				s.mu.Unlock()
+				return errors.New("ship start interrupted by graceful stop; process remains tracked")
+			}
+			c.initializing = false
 			if err = s.store.PutShip(context.Background(), current); err != nil {
 				s.mu.Unlock()
 				return err
@@ -291,11 +301,54 @@ func (s *Supervisor) Stop(ctx context.Context, id model.ID) error {
 	if e = s.store.PutShip(ctx, ship); e != nil {
 		return e
 	}
+	// Vere's first boot can receive TERM before its pier is registered. That
+	// request is ignored by its empty pier list. Wait for a private worker reply
+	// before signaling a new boot, including when its launch context was canceled.
+	s.mu.Lock()
+	initializing := c.initializing
+	s.mu.Unlock()
+	if initializing {
+		for {
+			select {
+			case <-c.done:
+				if c.cmd.ProcessState.ExitCode() != 0 {
+					return errors.New("runtime did not exit cleanly")
+				}
+				return nil
+			case <-ctx.Done():
+				return errors.New("graceful bootstrap stop interrupted; process remains tracked")
+			default:
+			}
+			query, cancel := context.WithTimeout(ctx, 10*time.Second)
+			_, err := vr.ReadIdentity(query, ship)
+			cancel()
+			if err == nil {
+				break
+			}
+			select {
+			case <-c.done:
+				continue
+			case <-ctx.Done():
+				return errors.New("graceful bootstrap stop interrupted; process remains tracked")
+			case <-time.After(250 * time.Millisecond):
+			}
+		}
+		// Confirm ownership again after waiting; never signal a recycled PID.
+		identity, e = StartIdentity(c.record.PID)
+		if e != nil || identity != c.record.StartIdentity {
+			select {
+			case <-c.done:
+				if c.cmd.ProcessState.ExitCode() == 0 {
+					return nil
+				}
+			default:
+			}
+			return errors.New("process identity changed or exit is unconfirmed; refusing to signal")
+		}
+	}
 	if e = c.cmd.Process.Signal(syscall.SIGTERM); e != nil {
 		return e
 	}
-	timer := time.NewTimer(60 * time.Second)
-	defer timer.Stop()
 	select {
 	case <-c.done:
 		if c.cmd.ProcessState.ExitCode() != 0 {
@@ -304,8 +357,6 @@ func (s *Supervisor) Stop(ctx context.Context, id model.ID) error {
 		return nil
 	case <-ctx.Done():
 		return errors.New("graceful stop interrupted; no utility launched")
-	case <-timer.C:
-		return errors.New("graceful stop timed out; process was not force-killed")
 	}
 }
 func (s *Supervisor) WriteInput(ctx context.Context, id model.ID, input []byte) error {

@@ -11,12 +11,41 @@ import http.cookiejar
 import json
 import pathlib
 import platform
+import re
 import signal
 import subprocess
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+
+
+SESSION_READY_TIMEOUT = 120
+
+
+def verify_authenticated_session(opener, destination, identity):
+    """Wait for the app's identity script, without accepting login HTML."""
+    target = destination + "/session.js"
+    deadline = time.monotonic() + SESSION_READY_TIMEOUT
+    while True:
+        try:
+            with opener.open(target, timeout=max(.01, min(60, deadline - time.monotonic()))) as response:
+                assert response.status == 200
+                assert response.geturl() == target, "session script redirected"
+                assert response.headers.get_content_type() in ["text/javascript", "application/javascript"]
+                session = response.read(65536)
+                assignment = re.search(rb"(?:^|(?<=[;\n]))\s*window\s*\.\s*ship\s*=\s*(['\"])(~?[a-z-]+)\1", session)
+                assert assignment, "session script has no ship assignment"
+                assert assignment[2].decode().lstrip("~") == identity.lstrip("~"), "session identity mismatch"
+                return
+        except urllib.error.HTTPError as error:
+            error.close()
+            if error.code != 404 or time.monotonic() >= deadline:
+                raise
+            # A fresh ship can authenticate before its app routes are ready.
+            # Refused authentication and other HTTP failures remain failures.
+            time.sleep(min(1, max(0, deadline - time.monotonic())))
 
 
 def main():
@@ -108,11 +137,7 @@ def main():
             assert response.status == 200
         del code
         assert list(cookies), "login did not issue a session cookie"
-        with opener.open(destination + "/", timeout=60) as response:
-            assert "/~/login" not in urllib.parse.urlsplit(response.geturl()).path
-        with opener.open(destination + "/session.js", timeout=60) as response:
-            session = response.read(65536)
-            assert ship["identity"].lstrip("~").encode() in session
+        verify_authenticated_session(opener, destination, ship["identity"])
         report["checks"]["authenticatedLogin"] = True
 
     try:

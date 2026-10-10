@@ -16,8 +16,8 @@ import (
 // released-runtime validation required before changing or retiring this policy.
 const minLMDBMapBytes int64 = 64 << 30
 
-// LMDBMapArgs sizes the mapping on every ship launch, including imports and
-// utility restarts. Vere 4.6 can overwrite a live default-sized LMDB mapping when
+// LMDBMapArgs sizes the mapping on every ship launch and supported maintenance
+// utility launch. Vere 4.6 can overwrite a live default-sized LMDB mapping when
 // it maps the loom; choosing a smaller map mitigates, but does not fix, that bug.
 // This is virtual address space, not allocated RAM or a limit on pier disk size.
 //

@@ -275,6 +275,15 @@ func (e *Executor) maintainWith(ctx context.Context, j *model.Job, ship model.Sh
 		return errors.New("pier is managed by another Harbor process")
 	}
 	defer func() { release() }()
+	if isMaintenance(j.Kind) {
+		mapArgs, err := vr.LMDBMapArgs(ctx, ship.PierPath, false)
+		if err != nil {
+			return err
+		}
+		// Maintenance parsers accept the map option after the subcommand.
+		// Replay (play) and update preparation (prep) do not accept it.
+		args = append(append([]string{args[0]}, mapArgs...), args[1:]...)
+	}
 	ship.State = "maintaining"
 	if err = e.store.PutShip(ctx, ship); err != nil {
 		return err

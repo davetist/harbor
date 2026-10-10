@@ -150,7 +150,12 @@ func run(args []string) error {
 		e = errors.Join(e, <-schedulerDone)
 	}
 	handler.Events.Close()
+	// Keep the controller, PTY and database alive until owned runtimes exit.
+	// Closing them at a fixed deadline can hang up an initializing ship before
+	// it has handled a graceful stop. Like utilities above, native shutdown is
+	// allowed to finish; it is never converted into a forced child termination.
+	e = errors.Join(e, sup.Shutdown(context.Background()))
 	shutdown, cancel := context.WithTimeout(context.Background(), 65*time.Second)
 	defer cancel()
-	return errors.Join(e, sup.Shutdown(shutdown), svc.Shutdown(shutdown))
+	return errors.Join(e, svc.Shutdown(shutdown))
 }
