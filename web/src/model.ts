@@ -15,6 +15,7 @@ export interface HarborClient {
   subscribe?(refresh: () => void): () => void;
   backups(id: string): Promise<BackupRecord[]>;
   host(): Promise<Host>; listShips(): Promise<Ship[]>; ship(id: string): Promise<Ship>;
+  removeShip(id: string): Promise<void>;
   boot(request: BootRequest, file?: File): Promise<string>; action(id: string, operation: Operation): Promise<string>;
   job(id: string): Promise<Job>; schedules(id: string): Promise<Schedule[]>; saveSchedule(schedule: Schedule): Promise<void>;
   resize(id: string, rows: number, cols: number): Promise<void>; logs(id: string): Promise<string>; input(id: string, command: string): Promise<void>; accessCode(id: string): Promise<string>;

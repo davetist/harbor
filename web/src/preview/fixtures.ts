@@ -20,8 +20,19 @@ export class PreviewClient implements HarborClient {
   async host(): Promise<Host> { return { hostname: 'harbor.local', platform: 'linux/arm64', dataDir: '/srv/harbor', pierRoot: '/srv/harbor/piers', allowedRoots: ['/srv/harbor/piers'], timezone: 'Europe/Madrid', loomSizes: [30,31,32], defaultShipHTTPBindAddress: '127.0.0.1', maintenanceProfile: 'Example · enabled by default; weekly Pack and Roll/Chop; 28-day conditional Meld; retains two epochs', maintenanceValidated: true } }
   async listShips() { return structuredClone(this.data.ships) }
   async ship(id: string) { const ship = this.data.ships.find(s => s.id === id); if (!ship) throw new Error('Ship not found.'); return structuredClone(ship) }
+  async removeShip(id: string) {
+    const ship = await this.ship(id)
+    if (ship.recoveryBlocked) throw new Error("Resolve this ship's recovery hold before removing it from Harbor.")
+    if (ship.desiredRunning || !['stopped', 'failed'].includes(ship.state)) throw new Error('Stop this ship before removing it from Harbor.')
+    if (this.data.jobs.some(job => job.shipId === id && !['completed', 'failed', 'skipped', 'interrupted'].includes(job.phase))) throw new Error('This ship has active or queued work. Wait for it to finish before removing it.')
+    this.data.ships = this.data.ships.filter(ship => ship.id !== id)
+    this.data.schedules = this.data.schedules.filter(schedule => schedule.shipId !== id)
+    this.data.jobs = this.data.jobs.filter(job => job.shipId !== id)
+    delete this.data.logs[id]
+    this.save()
+  }
   async boot(request: BootRequest) {
-    const id = crypto.randomUUID(); const ship: Ship = { ...this.data.ships[0], id, name: request.name || '~new-comet', nickname: request.mode === 'comet' ? request.folderName : '', pierPath: request.pierPath || `/srv/harbor/piers/${request.folderName || 'new-ship'}`, loomExponent: request.loomExponent, state: 'starting', webPort: 8082 }
+    const id = crypto.randomUUID(); const ship: Ship = { ...(this.data.ships[0] || initial().ships[0]), id, name: request.name || '~new-comet', nickname: request.mode === 'comet' ? request.folderName : '', pierPath: request.pierPath || `/srv/harbor/piers/${request.folderName || 'new-ship'}`, loomExponent: request.loomExponent, state: 'starting', webPort: 8082 }
     this.data.ships.push(ship); this.data.jobs.push({ id, shipId: id, kind: 'boot', phase: 'executing', error: '', startedAt: new Date().toISOString() }); this.save(); return id
   }
   async action(shipId: string, operation: Operation) { const id = crypto.randomUUID(); this.data.jobs.push({ id, shipId, kind: operation, phase: 'executing', error: '', startedAt: new Date().toISOString() }); this.save(); return id }

@@ -109,6 +109,7 @@ func (s *Server) routes() {
 			respond(w, 200, v)
 		}
 	})
+	s.mux.HandleFunc("DELETE /api/v1/ships/{id}", s.removeShip)
 	s.mux.HandleFunc("GET /api/v1/jobs/{id}", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.store.GetJob(r.Context(), model.ID(r.PathValue("id")))
 		if errors.Is(e, store.ErrNotFound) {

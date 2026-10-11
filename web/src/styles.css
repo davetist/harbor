@@ -40,3 +40,6 @@ h1:focus{outline:none}
 @media(max-width:760px){input:not([type=checkbox]),select{font-size:16px}.ship-actions{gap:8px}.schedule-fields{flex-wrap:wrap}.schedule-fields>label{min-width:100px}.recovery-actions{flex-wrap:wrap}}
 
 .detail>.error{margin-bottom:16px}.recovery-verify{margin-bottom:24px}
+.ship-removal{margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}.ship-removal button{font-size:12px}.ship-removal p{font-size:12px;margin-top:4px}
+.removal-confirmation{width:min(480px,calc(100vw - 32px));max-width:none;max-height:calc(100svh - 32px);overflow:auto;padding:24px;background:#0d0d0f;color:#ededed;border:1px solid #39393e;border-radius:6px}.removal-confirmation::backdrop{background:rgba(0,0,0,.75)}.removal-confirmation h2{line-height:1.5;overflow-wrap:anywhere}.removal-confirmation p{font-size:13px;line-height:1.6;margin-top:16px}.preserved-pier-path{display:block;margin-top:12px;padding:12px;background:#18181a;border-radius:4px;overflow-wrap:anywhere;font-size:12px;line-height:1.6}.removal-confirmation footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:24px}.removal-confirmation footer button{white-space:normal;font-size:12px}
+@media(max-width:480px){.removal-confirmation{padding:16px}}

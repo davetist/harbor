@@ -22,6 +22,12 @@ Stop the ship in its previous runner. Copy or move the complete pier, including 
 
 When viewing Harbor remotely, a folder picker browses the Harbor host. A path on your laptop is not a path on a separate server. Local key/archive uploads are the file-transfer paths.
 
+## Remove a ship from Harbor
+
+Choose **Manage → Overview → Remove from Harbor** after stopping the ship. The confirmation shows the complete pier path on the Harbor host. Removal unregisters the ship and clears its maintenance settings and Harbor history; its pier, runtime and exported archives stay on disk. Add the pier back later through **Use an existing pier → Existing folder**, confirming its original loom size again.
+
+Active or queued jobs, tracked live processes and unresolved recovery holds prevent removal. Wait for work to finish or resolve the hold first. Removal does not free disk space or delete a ship's identity.
+
 ## Loom size
 
 A 2 GiB loom is Urbit's state address-space capacity (`--loom 31`), not a 2 GiB disk allocation or a promise of 2 GiB resident RAM. Harbor currently supports loom exponents 30–32 (1, 2 and 4 GiB). Resident memory, utility working space, snapshots and event logs are separate. A drive adds storage, not RAM. An existing pier's loom must be confirmed accurately; shrinking it is not a migration shortcut.
