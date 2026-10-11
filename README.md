@@ -28,7 +28,7 @@ xattr -dr com.apple.quarantine "/Applications/Harbor.app"
 
 Then open Harbor again. The command removes the download quarantine attribute only from Harbor and its bundled files. A newer download may require approval again; see [macOS installation](docs/installation.md#allow-harbor-on-macos).
 
-Ship data and configuration survive updates and removal. See [installation](docs/installation.md) for updating, advanced configuration and existing-service safeguards. Every push to `main` runs [Build and publish install packages](https://github.com/davetist/harbor/actions/workflows/release-candidate.yml). Download all installers, binary archives, source code and checksums from the resulting versioned prerelease on [GitHub Releases](https://github.com/davetist/harbor/releases). Release downloads do not expire; they remain available until explicitly deleted. Each release identifies the commit it was built from.
+Ship data and configuration survive updates and removal. See [installation](docs/installation.md) for updating, advanced configuration and existing-service safeguards. Every push to `main` runs [Build and publish install packages](https://github.com/davetist/harbor/actions/workflows/release-candidate.yml). Each versioned prerelease on [GitHub Releases](https://github.com/davetist/harbor/releases) contains five installers: one universal Mac `.dmg`, Linux `.deb` and `.run` installers for amd64 and arm64, plus `SHA256SUMS` for those five files. Release downloads do not expire; they remain available until explicitly deleted. Each release identifies the commit it was built from. GitHub also supplies its own source ZIP/tar links automatically.
 
 ### From source
 
