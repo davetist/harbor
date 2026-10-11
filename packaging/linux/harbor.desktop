@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Name=Harbor
+Comment=Run and look after your Urbit ships
+Exec=/usr/bin/harbor desktop
+Icon=harbor
+Terminal=false
+Categories=Network;
+StartupNotify=false
+Actions=Stop;Uninstall;
+
+[Desktop Action Stop]
+Name=Stop Harbor and ships
+Exec=/usr/bin/harbor desktop --action stop
+
+[Desktop Action Uninstall]
+Name=Uninstall Harbor
+Exec=/usr/bin/harbor desktop --action uninstall

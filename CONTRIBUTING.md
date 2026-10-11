@@ -13,7 +13,12 @@ go test -race ./...
 go vet ./...
 npm --prefix web run typecheck
 npm --prefix web run test
+go mod download all
+python3 scripts/collect-notices.py go
+python3 scripts/test_installation_packages.py
 ```
+
+For installation changes, rebuild the runner and opt into a disposable OS-service trial with `HARBOR_NATIVE_INSTALL_TEST=1 HARBOR_INSTALL_BINARY="$PWD/dist/harbor" go test -v ./internal/installation -run TestNativeServiceLifecycle`. Supplying `HARBOR_INSTALL_UPGRADE_BINARY` adds a native replacement trial. The test creates a unique service and temporary empty registry, then verifies data-preserving removal. Keep clean-machine download/manual macOS approval, privileged package-manager and actual boot-without-login checks separate. Build the Mac shell with `HARBOR_GO=go sh packaging/macos/build-app.sh VERSION`; see [macOS distribution](docs/macos-distribution.md).
 
 For UI changes, install Chromium into the project cache and run browser checks:
 

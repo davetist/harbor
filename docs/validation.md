@@ -41,7 +41,7 @@ Native integration tests require explicit disposable paths/flags and some destru
 
 ## Release acceptance
 
-An experimental source release can invite testing with explicit limitations. A stable release needs native acceptance on all four targets, full key/comet onboarding and real-identity migration, physical external-storage trials, representative resource profiles, accessibility checks and a usable signed macOS distribution. See [release readiness](release-readiness.md).
+An experimental source release can invite testing with explicit limitations. A stable release needs native acceptance on all four targets, full key/comet onboarding and real-identity migration, physical external-storage trials, representative resource profiles, accessibility checks and a verified macOS download/install flow with the documented manual approval. See [release readiness](release-readiness.md).
 
 ## Readiness follow-through — 2026-10-10
 
@@ -80,6 +80,20 @@ The login contract requires a fresh cookie, the exact same-origin `/session.js` 
 
 Retention regressions cover referenced uploads, pending imports, active jobs, recovery holds, minimum export retention with current integrity checks, corruption/changed-checkpoint refusal, canonical controller aliases, unknown files, changed/symlink targets, preview/apply and budget refusal. A separate CLI smoke check removed only expired disposable inputs after preview and preserved an unknown file. The live controller lock refused cleanup. No operator archive cleanup was performed.
 
-No native Intel host, physical external drive or valid disposable boot key was available for this run. Developer ID distribution credentials were unavailable. Native CI and a signed-installer path are prepared, but those acceptance gates remain open.
+No native Intel host, physical external drive or valid disposable boot key was available for this run. Native CI is prepared, but those hardware/key acceptance gates remain open. Harbor's current [macOS distribution](macos-distribution.md) uses manual approval without Developer ID signing or notarization. The browser-download allowance was verified in the trial below; clean-Mac first installation and public-release download checks remain open.
 
 The [LMDB workaround maintenance note](lmdb-mapping-workaround.md) relates the adaptive policy to the [POSIX loom investigation](upstream/vere-loom-reservation-proposal.md), distinguishes ship-start coverage from utility processes, and defines the upstream ownership, native validation and default-capacity evidence required before retirement. Passing Harbor's selector tests alone does not establish those retirement gates.
+
+## macOS installation menus — 2026-10-11
+
+The `0.1.0-alpha.4-install.3` Mac app passed native menu checks with an empty disposable registry. **Close Window** left the app running without a visible window and preserved the same background runner PID. **Stop Harbor** unloaded the LaunchAgent, disabled startup and stopped HTTP; **Open Harbor** restarted the runner and restored the interface. Cancelling **Uninstall Harbor** preserved the app and the same runner PID. Confirming uninstall moved the test app to Trash, quit the interface and removed its LaunchAgent, copied executable and installation record. Configuration and a disposable data fixture remained unchanged.
+
+These checks cover the installed candidate's interface and empty-registry service lifecycle. Shutdown with active ships retains its separate acceptance requirements. The later `0.1.0-alpha.4-install.4` disk image passed the browser-download trial below; this menu trial used `install.3`.
+
+## macOS browser download and allowance — 2026-10-11
+
+Safari downloaded the exact `0.1.0-alpha.4-install.4` disk image over a temporary loopback HTTP endpoint. Its SHA-256 matched the original candidate: `9c9ec3568d5630810322ada592747bbdd516bbd61c1362c8d823d67e2a07b529`. Safari applied a real `com.apple.quarantine` attribute. Finder opened the downloaded disk image and copied its app into `/Applications/Harbor.app`, preserving that quarantine. The first launch was blocked with **Harbor Not Opened**; the existing runner remained unchanged.
+
+The documented `xattr -dr com.apple.quarantine "/Applications/Harbor.app"` command removed quarantine from all 12 affected app entries. Executable and signature contents were unchanged, and ad-hoc signature verification passed. Opening the same app through Finder then displayed Harbor's welcome screen. Its managed runner matched the downloaded binary and upgraded the existing `install.1` installation to `install.4`, retaining the exact configuration and empty registry. Quitting the interface left the same runner active; the downloaded volume was ejected successfully.
+
+This verifies an actual browser download, the blocked first launch and the command on this Apple Silicon Mac. The Mac already had an empty Harbor installation, and the candidate was served locally because no public binary release exists. First installation on a clean Mac, public-release download delivery, and the **Open Anyway** alternative still require their own trials.

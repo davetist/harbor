@@ -33,6 +33,18 @@ func main() {
 	}
 }
 func run(args []string) error {
+	if len(args) > 0 {
+		switch args[0] {
+		case "install":
+			return installCommand(args[1:])
+		case "service":
+			return serviceCommand(args[1:])
+		case "desktop":
+			return desktopCommand(args[1:])
+		case "package-maintenance":
+			return packageCommand(args[1:])
+		}
+	}
 	if len(args) > 0 && args[0] == "retention" {
 		return retain(args[1:])
 	}
@@ -41,7 +53,7 @@ func run(args []string) error {
 		return nil
 	}
 	if len(args) == 0 || args[0] != "serve" {
-		return errors.New("usage: harbor serve [--config path] | retention [--config path] [--apply] | version")
+		return errors.New("usage: harbor install [--headless] [--upgrade] | desktop | service start/stop/status/uninstall | serve [--config path] | retention [--config path] [--apply] | version")
 	}
 	flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 	path := flags.String("config", "", "JSON configuration path")

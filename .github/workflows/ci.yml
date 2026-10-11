@@ -32,6 +32,14 @@ jobs:
       - run: go test -race ./...
       - run: go vet ./...
       - run: python3 scripts/test_native_acceptance.py
+      - name: Installation package contracts
+        run: |
+          go mod download all
+          python3 scripts/collect-notices.py go
+          python3 scripts/test_installation_packages.py
+      - name: Compile universal Mac app and disk image
+        if: runner.os == 'macOS'
+        run: HARBOR_GO=go sh packaging/macos/build-app.sh 0.1.0-ci
       - run: npm --prefix web run typecheck
       - run: npm --prefix web run test
       - run: ./dist/harbor version

@@ -4,6 +4,12 @@
 
 Initial experimental Harbor implementation and publication preparation. No public release has been published.
 
+- Universal Mac app/disk image with automatic user-service setup, native file pickers/downloads, persistent background operation and explicit stop/uninstall controls.
+- Debian/Ubuntu desktop packages with application-menu launch/stop/removal, plus offline one-command ARM64/amd64 headless installers.
+- Managed installation records, data-preserving upgrades/removal, previous-runner rollback, logged-out-user package handling and service-PID readiness checks.
+- macOS distribution without Developer ID signing or notarization, with manual first-launch approval and a Harbor-only quarantine command included in the disk image and installation guide.
+- Native installation lifecycle acceptance on Apple Silicon and Raspberry Pi, plus a real Safari download, blocked macOS launch, documented quarantine command and successful native launch/upgrade. Clean-Mac first installation, public-release delivery and privileged desktop-package/boot trials remain separate gates.
+
 - Native Go service with an embedded React browser interface for macOS/Linux, x86_64/ARM64.
 - Key/comet onboarding, stopped-folder registration and integrity-checked full-pier archives.
 - Persistent ships/jobs, process ownership, graceful shutdown and interrupted-work recovery holds.
@@ -21,7 +27,7 @@ Initial experimental Harbor implementation and publication preparation. No publi
 - Added offline upload/export retention preview/apply, disk accounting, cleanup budgets and protection for pending jobs/recovery/checkpoints. Startup key cleanup preserves referenced inputs.
 - Corrected port-zero Host validation and exposed manager/pier storage locations distinctly.
 - Improved keyboard focus, accessible tabs/upload selection, contrast, touch targets and narrow layouts; added fixture and opt-in native accessibility regressions.
-- Added disposable native onboarding/lifecycle tooling, a manual four-platform acceptance workflow and a universal Developer ID signing/notarization installer path. Hardware/key/signing acceptance remains explicit in release readiness.
+- Added disposable native onboarding/lifecycle tooling, a manual four-platform acceptance workflow and a universal Developer ID signing/notarization installer path (superseded by the current unsigned app distribution). Hardware/key acceptance remains explicit in release readiness.
 
 - Added adaptive LMDB mappings on every macOS/Linux ship launch on x86_64 and ARM64, including first boot, imports, manual/automatic starts and post-utility restarts. Mapping size is at least twice the largest database's logical file size, rounded up to a power of two with a 64 GiB minimum and recalculated on each start. There is no 32 GiB database cutoff or live resizing. Native Mac ARM64 and Pi ARM64 trials verified 64/128/256 GiB mappings and authenticated login, automatic startup, post-Pack restart and unsafe-storage refusal on isolated fixtures. Larger fixtures used valid databases with sparse trailing space; populated large-ship acceptance and native Intel execution remain open.
 - Extended adaptive mapping to Pack/Meld/Roll/Chop utility processes, remeasuring under the pier guard before spawn. Child-process regressions cover all four utilities, database growth, unsafe-storage refusal and unchanged replay/update-preparation arguments. Vere 4.6's `play` and `prep` parsers do not support the map option.

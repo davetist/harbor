@@ -4,7 +4,7 @@
 
 Harbor is an open-source, self-hosted Urbit ship runner for **macOS and Linux, on x86_64 and ARM64**. It aims to bring [Port](https://github.com/latter-bolden/port)'s simple, elegant approach back to life: easy onboarding, a quiet interface, and practical tools for looking after your ships.
 
-A native Go service runs your ships. You manage them in a browser; closing the browser leaves them running. The interface uses upstream Urbit sigils and keeps maintenance, runtime updates, recovery and the Dojo within reach.
+A native Go service runs your ships. The Mac app and Linux application launcher open the same interface; closing the window or browser leaves ships running. The interface uses upstream Urbit sigils and keeps maintenance, runtime updates, recovery and the Dojo within reach.
 
 ![Harbor ship list, shown with simulated preview data](docs/images/ships.png)
 
@@ -13,6 +13,24 @@ A native Go service runs your ships. You manage them in a browser; closing the b
 **Experimental alpha.** Apple Silicon and Raspberry Pi 4 candidates passed stopped-comet import, all four maintenance commands, export/restore, replay and authenticated restarts. The Mac candidate also passed shutdown during first boot and resumed the preserved pier. Native Intel ship execution, valid identity-key onboarding/migration, physical external-drive failures and broader recovery acceptance remain open. The LMDB workaround mitigates an upstream address collision; an earlier untraced Pi Pack crash remains preserved with its recovery hold. Use disposable ships while these acceptance gates are unfinished. See [validation](docs/validation.md) and [release readiness](docs/release-readiness.md).
 
 ## Start Harbor
+
+Installation candidates provide familiar desktop installs and a separate headless path:
+
+- **Mac (macOS 13+):** open the universal `.dmg`, drag Harbor into Applications, then open it. If macOS blocks the unsigned download, [allow Harbor](docs/installation.md#allow-harbor-on-macos). Harbor creates its configuration and background runner. Use the Harbor menu to stop or uninstall it.
+- **Debian/Ubuntu/Linux desktop:** open the matching `.deb` in your software installer, then launch **Harbor** from the application menu. The launcher sets up your per-user runner and opens your browser. Its menu actions stop or uninstall Harbor.
+- **Headless Linux / Raspberry Pi:** download the matching `.run` and run `sh harbor-VERSION-linux-arm64.run` (use `amd64` on Intel/AMD). It installs offline, configures the service, handles startup without login, and prints the browser addresses. Administrator approval may be requested for startup at boot.
+
+Mac downloads use manual first-launch approval without Developer ID signing or notarization. If macOS blocks Harbor, open **System Settings → Privacy & Security**, choose **Open Anyway** for Harbor, and confirm **Open**. Alternatively, after dragging Harbor into Applications, run:
+
+```sh
+xattr -dr com.apple.quarantine "/Applications/Harbor.app"
+```
+
+Then open Harbor again. The command removes the download quarantine attribute only from Harbor and its bundled files. A newer download may require approval again; see [macOS installation](docs/installation.md#allow-harbor-on-macos).
+
+Ship data and configuration survive updates and removal. See [installation](docs/installation.md) for updating, advanced configuration and existing-service safeguards. These candidates are currently built locally; public binary publication remains pending.
+
+### From source
 
 From a source checkout, install Go 1.27.2 or newer and Node 24.x, then run:
 
@@ -51,7 +69,7 @@ Tailscale, mounting/formatting drives, certificates and network policy remain ex
 - [External storage](docs/external-storage.md)
 - [Retained uploads and export cleanup](docs/retention.md)
 - [Native acceptance trials](docs/native-acceptance.md)
-- [Signed macOS distribution](docs/macos-signing.md)
+- [macOS distribution and first-launch approval](docs/macos-distribution.md)
 - [Architecture](docs/architecture.md)
 - [LMDB mapping workaround, evidence and retirement criteria](docs/lmdb-mapping-workaround.md)
 - [Validation and remaining acceptance gates](docs/validation.md)

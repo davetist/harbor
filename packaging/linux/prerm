@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in remove|deconfigure) /usr/lib/harbor/harbor package-maintenance remove;; esac

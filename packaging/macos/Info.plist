@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleIdentifier</key><string>org.harbor.desktop</string>
+<key>CFBundleName</key><string>Harbor</string>
+<key>CFBundleDisplayName</key><string>Harbor</string>
+<key>CFBundleExecutable</key><string>Harbor</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleIconFile</key><string>Harbor.icns</string>
+<key>CFBundleShortVersionString</key><string>HARBOR_NUMERIC_VERSION</string>
+<key>CFBundleVersion</key><string>HARBOR_NUMERIC_VERSION</string>
+<key>HarborReleaseVersion</key><string>HARBOR_VERSION</string>
+<key>LSMinimumSystemVersion</key><string>13.0</string>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSAppTransportSecurity</key><dict>
+<key>NSAllowsLocalNetworking</key><true/>
+<key>NSAllowsArbitraryLoadsInWebContent</key><true/>
+</dict>
+<key>NSHumanReadableCopyright</key><string>Harbor contributors. MIT license.</string>
+</dict></plist>

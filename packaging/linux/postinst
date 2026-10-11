@@ -1,0 +1,3 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in configure) /usr/lib/harbor/harbor package-maintenance upgrade;; esac

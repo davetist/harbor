@@ -93,7 +93,7 @@ func (s *Server) routes() {
 		if validated {
 			description = "Enabled by default · weekly Pack and Roll/Chop · 28-day Meld when the snapshot reaches 512 MiB · retains two epochs · resource checks before every run"
 		}
-		respond(w, 200, map[string]any{"hostname": name, "platform": runtime.GOOS + "/" + runtime.GOARCH, "dataDir": s.cfg.DataDir, "pierRoot": s.cfg.AllowedRoots[0], "allowedRoots": s.cfg.AllowedRoots, "timezone": s.cfg.Timezone, "loomSizes": []int{30, 31, 32}, "defaultShipHTTPBindAddress": s.cfg.DefaultShipHTTPBindAddress, "maintenanceProfile": description, "maintenanceValidated": validated})
+		respond(w, 200, map[string]any{"hostname": name, "managerPID": os.Getpid(), "platform": runtime.GOOS + "/" + runtime.GOARCH, "dataDir": s.cfg.DataDir, "pierRoot": s.cfg.AllowedRoots[0], "allowedRoots": s.cfg.AllowedRoots, "timezone": s.cfg.Timezone, "loomSizes": []int{30, 31, 32}, "defaultShipHTTPBindAddress": s.cfg.DefaultShipHTTPBindAddress, "maintenanceProfile": description, "maintenanceValidated": validated})
 	})
 	s.mux.HandleFunc("GET /api/v1/ships", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.store.ListShips(r.Context())

@@ -1,6 +1,6 @@
 # Architecture
 
-Harbor is a single-user Go process serving an embedded React application and `/api/v1`. SQLite stores ships, schedules, durable jobs, launch identities, output and recovery holds. Closing a browser does not end a ship. Background installers register this same process with the OS user service manager.
+Harbor is a single-user Go process serving an embedded React application and `/api/v1`. SQLite stores ships, schedules, durable jobs, launch identities, output and recovery holds. Closing a browser does not end a ship. The Mac AppKit/WebKit shell and Linux desktop launcher register this same process with the OS user service manager. Installation records and owned-definition/binary checks govern updates/removal; the runner is copied out of the app/package. Desktop close/quit does not stop the service. `internal/installation` owns this lifecycle; headless Linux adds OS-approved user lingering.
 
 | Area | Responsibility |
 | --- | --- |

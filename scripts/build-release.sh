@@ -26,6 +26,7 @@ for release_os in darwin linux; do
   cp README.md LICENSE CONTRIBUTING.md SECURITY.md CHANGELOG.md dist/THIRD_PARTY_NOTICES.txt "$stage/$artifact/"
   cp -R docs "$stage/$artifact/docs"
   case "$release_os" in darwin) cp packaging/macos/install.sh packaging/macos/uninstall.sh "$stage/$artifact/";; linux) cp packaging/linux/* "$stage/$artifact/";; esac
+  if [ "$release_os" = linux ]; then python3 scripts/build-linux.py "$release_version" "$release_arch" "$stage/$artifact/harbor" "$stage"; fi
   python3 - "$stage/$artifact" "$stage/$artifact.tar.gz" <<'PY'
 import gzip,pathlib,sys,tarfile
 root=pathlib.Path(sys.argv[1])
@@ -42,14 +43,23 @@ with open(sys.argv[2],'xb') as target:
 PY
  done
 done
+if [ "$(uname -s)" = Darwin ]; then
+ HARBOR_GO="$build_go" sh packaging/macos/build-app.sh "$release_version" "$stage/desktop"
+ cp "$stage/desktop/"*.dmg "$stage/"
+fi
 python3 scripts/build-source.py "$release_version" "$stage/harbor-$release_version-source.tar.gz"
 python3 - "$stage" <<'PY'
 import hashlib,pathlib,sys
 directory=pathlib.Path(sys.argv[1])
 with (directory/'SHA256SUMS').open('w') as out:
-    for archive in sorted(directory.glob('*.tar.gz')):
+    for archive in sorted(p for p in directory.iterdir() if p.is_file() and p.name.endswith(('.tar.gz','.deb','.run','.dmg'))):
         out.write(f'{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\n')
 PY
 mkdir "$release_dir"
-cp "$stage/"*.tar.gz "$stage/SHA256SUMS" "$release_dir/"
+python3 - "$stage" "$release_dir" <<'PY'
+import pathlib,shutil,sys
+for path in pathlib.Path(sys.argv[1]).iterdir():
+ if path.is_file() and (path.name=='SHA256SUMS' or path.name.endswith(('.tar.gz','.deb','.run','.dmg'))):
+  shutil.copy2(path,pathlib.Path(sys.argv[2])/path.name)
+PY
 echo "Release candidates written to $release_dir"
