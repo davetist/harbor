@@ -1,5 +1,7 @@
-name: Build release candidate
+name: Build and publish install packages
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       version:
@@ -8,6 +10,8 @@ on:
         default: 0.1.0-alpha.1
 permissions:
   contents: read
+env:
+  RELEASE_VERSION: ${{ inputs.version || format('0.1.0-main.{0}', github.run_number) }}
 jobs:
   packages:
     runs-on: ubuntu-24.04
@@ -25,17 +29,63 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Build source, binary archives and Linux desktop/headless installers
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
         run: HARBOR_GO=go scripts/build-release.sh "$RELEASE_VERSION"
       - run: go test -race ./... && go vet ./...
       - run: npm --prefix web run typecheck && npm --prefix web run test && npm --prefix web audit
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - run: python3 scripts/test_installation_packages.py
+      - name: Verify package checksums
+        run: cd "dist/releases/$RELEASE_VERSION" && sha256sum -c SHA256SUMS
+      - name: Upload binary archives and Linux installers
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: harbor-release-candidate
-          path: dist/releases
+          name: harbor-install-packages-${{ env.RELEASE_VERSION }}
+          path: dist/releases/${{ env.RELEASE_VERSION }}
           if-no-files-found: error
           retention-days: 14
+  publish:
+    needs: [packages, mac-desktop]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download binary archives and Linux installers
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: harbor-install-packages-${{ env.RELEASE_VERSION }}
+          path: downloads/packages
+      - name: Download universal Mac installer
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: harbor-macos-universal-${{ env.RELEASE_VERSION }}
+          path: downloads/macos
+      - name: Assemble and verify release assets
+        run: |
+          (cd downloads/packages && sha256sum -c SHA256SUMS)
+          (cd downloads/macos && sha256sum -c SHA256SUMS)
+          mkdir release-assets
+          cp downloads/packages/*.tar.gz downloads/packages/*.deb downloads/packages/*.run downloads/macos/*.dmg release-assets/
+          cat downloads/packages/SHA256SUMS downloads/macos/SHA256SUMS | sort -k 2 > release-assets/SHA256SUMS
+          (cd release-assets && sha256sum -c SHA256SUMS)
+      - name: Publish versioned GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.md <<EOF
+          Automated experimental Harbor build from commit $GITHUB_SHA.
+
+          Installers: universal macOS DMG, Linux amd64/arm64 desktop DEB packages and offline headless RUN installers.
+          Also includes macOS/Linux amd64/arm64 binary archives, source code and SHA256SUMS for all ten packages.
+
+          macOS downloads require manual first-launch approval; Developer ID signing and notarization are not provided.
+          Use disposable ships while native Intel, identity-key onboarding and recovery acceptance remain incomplete.
+
+          Build: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          EOF
+          gh release create "v$RELEASE_VERSION" release-assets/* \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Harbor $RELEASE_VERSION" --notes-file release-notes.md \
+            --prerelease --latest=false
   mac-desktop:
     runs-on: macos-15
     timeout-minutes: 30
@@ -52,12 +102,15 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Build universal local Mac candidate
-        env:
-          RELEASE_VERSION: ${{ inputs.version }}
         run: HARBOR_GO=go sh packaging/macos/build-app.sh "$RELEASE_VERSION"
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      - name: Verify disk image checksum
+        run: cd "dist/desktop/$RELEASE_VERSION" && shasum -a 256 -c SHA256SUMS
+      - name: Upload universal Mac installer
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: harbor-mac-desktop-candidate
-          path: dist/desktop
+          name: harbor-macos-universal-${{ env.RELEASE_VERSION }}
+          path: |
+            dist/desktop/${{ env.RELEASE_VERSION }}/*.dmg
+            dist/desktop/${{ env.RELEASE_VERSION }}/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
