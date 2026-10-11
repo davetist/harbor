@@ -4,7 +4,6 @@ import (
 	"context"
 	"harbor/internal/model"
 	vr "harbor/internal/runtime"
-	"path/filepath"
 )
 
 func (e *Executor) EnableRuntimeUpdates(dir string) {
@@ -32,17 +31,14 @@ func (e *Executor) EnableRuntimeUpdates(dir string) {
 			j.Result = "Already using the verified stable Vere " + vr.StableVersion + " runtime."
 			return nil
 		}
-		b, err := e.VerifiedBackup(ctx, ship.ID)
-		if err != nil {
-			return err
-		}
 		args, err := vr.BuildArgs(ship, "update")
 		if err != nil {
 			return err
 		}
-		return e.maintainWith(context.WithoutCancel(ctx), j, ship, args, func(ctx context.Context, ship model.Ship) error {
-			return e.takeFullBackup(ctx, j, ship, filepath.Dir(b.ArchivePath))
-		}, func(ctx context.Context, ship *model.Ship) error {
+		// Vere prep saves an up-to-date checkpoint for the version transition.
+		// Keep the old runtime and native checkpoints; a full-pier migration
+		// export is neither a prerequisite nor part of this update operation.
+		return e.maintainWith(context.WithoutCancel(ctx), j, ship, args, nil, func(ctx context.Context, ship *model.Ship) error {
 			ship.RuntimePath = selected.Path
 			ship.RuntimeVersion = "Vere " + vr.StableVersion
 			return nil
