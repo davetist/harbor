@@ -30,15 +30,14 @@ type child struct {
 	initializing bool
 }
 type Supervisor struct {
-	store        *store.Store
-	launch       Launcher
-	mu           sync.Mutex
-	children     map[model.ID]*child
-	logs         map[model.ID]*LogBuffer
-	logErrors    map[model.ID]bool
-	OnLog        func(model.Event)
-	OnChange     func(model.Event)
-	AllowedRoots []string
+	store     *store.Store
+	launch    Launcher
+	mu        sync.Mutex
+	children  map[model.ID]*child
+	logs      map[model.ID]*LogBuffer
+	logErrors map[model.ID]bool
+	OnLog     func(model.Event)
+	OnChange  func(model.Event)
 }
 
 func New(st *store.Store, l Launcher) *Supervisor {
@@ -224,7 +223,7 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 }
 
 func (s *Supervisor) ValidatePier(ship model.Ship, newDestination bool) error {
-	return pier.VerifyRegistered(ship.PierPath, s.AllowedRoots, newDestination)
+	return pier.VerifyRegistered(ship.PierPath, newDestination)
 }
 func (s *Supervisor) wait(id model.ID, c *child) {
 	e := c.cmd.Wait()

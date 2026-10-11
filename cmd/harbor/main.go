@@ -98,7 +98,6 @@ func run(args []string) error {
 	}
 	defer listener.Close()
 	sup := supervisor.New(st, nil)
-	sup.AllowedRoots = cfg.AllowedRoots
 	executor := jobs.New(st, sup)
 	executor.EnableBackups(filepath.Join(cfg.DataDir, "backups"))
 	executor.EnableReplay()

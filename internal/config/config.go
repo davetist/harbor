@@ -19,8 +19,10 @@ type Config struct {
 	DefaultShipHTTPBindAddress string           `json:"defaultShipHTTPBindAddress"`
 	AdvertisedHost             string           `json:"advertisedHost"`
 	DataDir                    string           `json:"dataDir"`
-	AllowedRoots               []string         `json:"allowedRoots"`
-	Timezone                   string           `json:"timezone"`
+	// AllowedRoots retains legacy default-folder and volume-pin configuration;
+	// it does not restrict where a user can create or register a pier.
+	AllowedRoots []string `json:"allowedRoots"`
+	Timezone     string   `json:"timezone"`
 }
 
 func Load(path string) (Config, error) {

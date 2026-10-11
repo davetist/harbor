@@ -42,7 +42,7 @@ To keep the user service running after logout and start it at boot, the same com
 
 Extract the binary archive for the host's OS/CPU, check it against `SHA256SUMS`, and run `./harbor version`. Then start `./harbor serve`. Source builds are described in the README. Keep the service process running; closing its browser is safe, ending the foreground process stops Harbor and its owned ships gracefully.
 
-Without a configuration file, data lives in `Harbor` under the OS user configuration directory: `~/Library/Application Support/Harbor` on macOS, and `$XDG_CONFIG_HOME/Harbor` or `~/.config/Harbor` on Linux. Default permitted piers live in `dataDir/piers`.
+Without a configuration file, data lives in `Harbor` under the OS user configuration directory: `~/Library/Application Support/Harbor` on macOS, and `$XDG_CONFIG_HOME/Harbor` or `~/.config/Harbor` on Linux. The default pier destination is `dataDir/piers`; you can choose any other accessible folder.
 
 To choose locations, save a private JSON file and pass its absolute path:
 
@@ -65,7 +65,7 @@ JSON does not expand `~` or environment variables. Unknown fields and relative s
 | `defaultShipHTTPBindAddress` | `0.0.0.0`, IPv4 web binding for new registrations. Existing ships keep their saved binding. |
 | `advertisedHost` | Optional hostname/IP for **Open ship**. Otherwise use the browser's Harbor hostname/IP. This does not change listeners. |
 | `dataDir` | Manager database, runtimes, uploads and backups. |
-| `allowedRoots` | Permitted host folders for piers; defaults to `dataDir/piers`. This is a path policy, not an OS sandbox. |
+| `allowedRoots` | Legacy default-folder list; defaults to `dataDir/piers`. The first folder is suggested during setup. Also supplies paths for optional startup volume pins; does not restrict where piers can be stored. |
 | `timezone` | Host IANA timezone; choose explicitly if detection is unsuitable. |
 | `maxArchiveBytes` | 16 GiB compressed uploads; configurable up to 64 GiB. Extraction has a separate fixed 64 GiB limit. |
 | `requiredVolumes` | Mount path + filesystem UUID pins; see external storage. |

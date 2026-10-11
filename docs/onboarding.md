@@ -2,11 +2,11 @@
 
 Harbor's homepage shows registered ships, or onboarding when none exist. A keyfile boots fresh state; an existing pier preserves the ship's current state. They serve different purposes.
 
-**Browse** navigates folders on the computer running Harbor. The Mac app uses the macOS folder browser; the web interface and Linux desktop use Harbor's directory dialog, with parent navigation, breadcrumbs, Home, typed paths and a hidden-folder toggle. Choosing a folder confirms the path; cancelling keeps the previous value. Browsing respects the Harbor service user's OS read permissions. Import and boot additionally require the destination to be within a configured `allowedRoots` storage location. When controlling a Pi from another computer, the directory dialog browses the Pi's folders.
+**Browse** navigates folders on the computer running Harbor. The Mac app uses the macOS folder browser; the web interface and Linux desktop use Harbor's directory dialog, with parent navigation, breadcrumbs, Home, typed paths and a hidden-folder toggle. Choosing a folder confirms the path; cancelling keeps the previous value. You can create or register a pier in any folder the Harbor service user can access and write to, including mounted external drives. No Harbor folder whitelist is required. When controlling a Pi from another computer, the directory dialog browses the Pi's folders.
 
 ## Boot with a key
 
-Choose **Start with a key**, select the keyfile from your browser's computer, and choose a destination on the Harbor host under a permitted root. Harbor stages the key privately, resolves the verified native runtime, creates a new pier and waits for readiness. Consumed keys are removed after the job; abandoned keys are cleaned at startup after 24 hours. The new destination must not already exist.
+Choose **Start with a key**, select the keyfile from your browser's computer, and choose a destination on the Harbor host. Harbor stages the key privately, resolves the verified native runtime, creates a new pier and waits for readiness. Consumed keys are removed after the job; abandoned keys are cleaned at startup after 24 hours. The new destination must not already exist.
 
 A keyfile does not contain your apps, messages or previous pier history. To move a running identity, migrate its complete current pier instead. Avoid running two copies of the same identity.
 
@@ -40,4 +40,4 @@ Runtime update/replay create their own local checkpoints and follow their own re
 
 ## External drives
 
-Both key boot and existing-pier registration work on a mounted permitted drive. Configure the mount/UUID pin first, then select the destination there. You can keep manager state locally and put piers externally, or put all state on the drive. See [external storage](external-storage.md) for exact configuration and remaining hardware validation.
+Both key boot and existing-pier registration work on a mounted drive with the necessary OS permissions. Select the destination there directly. You can optionally configure a mount/UUID pin so Harbor refuses startup if that drive is missing or replaced. You can keep manager state locally and put piers externally, or put all state on the drive. See [external storage](external-storage.md) for pin configuration and remaining hardware validation.

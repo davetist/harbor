@@ -59,7 +59,7 @@ func Guard(path string) (func(), error) {
 	}
 	path, e = filepath.EvalSymlinks(absolute)
 	if os.IsNotExist(e) {
-		// Virgin piers do not exist yet; their permitted parent does.
+		// Virgin piers do not exist yet; their chosen parent does.
 		parent, err := filepath.EvalSymlinks(filepath.Dir(absolute))
 		if err != nil {
 			return nil, err

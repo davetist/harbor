@@ -35,6 +35,6 @@ The manually dispatched **Native disposable comet acceptance** workflow runs the
 
 ## Physical storage trial
 
-The intended physical drive must be attached, mounted and UUID-pinned using [external storage](external-storage.md). Do not use an operator's live pier. Place a new disposable trial under a permitted folder on that drive and record its filesystem, capacity, connection/enclosure and actual allocated bytes.
+The intended physical drive must be attached, mounted and UUID-pinned using [external storage](external-storage.md). Do not use an operator's live pier. Place a new disposable trial in a chosen folder on that drive and record its filesystem, capacity, connection/enclosure and actual allocated bytes.
 
 Verify boot/login, maintenance, export/restore and restart with the drive present. Stop Harbor and verify no writer before a normal unmount. Startup with the drive absent or a replacement UUID must refuse without creating fallback data. Disconnect, enclosure/power-loss and corruption trials require an explicitly disposable drive/partition and agreement on those destructive fault injections; they cannot be inferred from disk-image/mount fixtures. Reattach and inspect recovery holds, archive integrity and actual login before calling recovery accepted.

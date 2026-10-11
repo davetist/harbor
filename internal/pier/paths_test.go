@@ -6,15 +6,36 @@ import (
 	"testing"
 )
 
-func TestFolderSymlinkCannotEscapeAllowedRoots(t *testing.T) {
+func TestFolderSymlinksResolveToChosenLocation(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
-	os.Symlink(outside, filepath.Join(root, "escape"))
-	if _, e := Canonical(filepath.Join(root, "escape"), []string{root}, false); e == nil {
-		t.Fatal("escaped root")
+	if err := os.Symlink(outside, filepath.Join(root, "chosen")); err != nil {
+		t.Fatal(err)
 	}
-	if _, e := Canonical(filepath.Join(root, "new"), []string{root}, true); e != nil {
-		t.Fatal(e)
+	real, err := filepath.EvalSymlinks(outside)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, newDestination := range []bool{false, true} {
+		path, want := filepath.Join(root, "chosen"), real
+		if newDestination {
+			path, want = filepath.Join(path, "new"), filepath.Join(want, "new")
+		}
+		got, err := Canonical(path, newDestination)
+		if err != nil || got != want {
+			t.Fatalf("chosen symlink location: got %q, want %q (%v)", got, want, err)
+		}
+	}
+}
+
+func TestNewDestinationRejectsDanglingSymlink(t *testing.T) {
+	root := t.TempDir()
+	p := filepath.Join(root, "pier")
+	if err := os.Symlink(filepath.Join(root, "missing"), p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Canonical(p, true); err == nil {
+		t.Fatal("existing dangling symlink accepted as a new destination")
 	}
 }
 func TestExistingDestinationUnchanged(t *testing.T) {
@@ -22,7 +43,7 @@ func TestExistingDestinationUnchanged(t *testing.T) {
 	p := filepath.Join(root, "pier")
 	os.Mkdir(p, 0700)
 	os.WriteFile(filepath.Join(p, "keep"), []byte("original"), 0600)
-	if _, e := Canonical(p, []string{root}, true); e == nil {
+	if _, e := Canonical(p, true); e == nil {
 		t.Fatal("existing destination accepted")
 	}
 	b, _ := os.ReadFile(filepath.Join(p, "keep"))

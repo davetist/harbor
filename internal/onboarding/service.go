@@ -103,7 +103,7 @@ func (s *Service) create(ctx context.Context, r Request) (model.ID, error) {
 		}
 		path = filepath.Join(path, label)
 	}
-	canonical, e := pier.Canonical(path, s.Config.AllowedRoots, newDestination)
+	canonical, e := pier.Canonical(path, newDestination)
 	if e != nil {
 		return "", e
 	}
@@ -140,8 +140,8 @@ func (s *Service) execute(ctx context.Context, j *model.Job) error {
 	if j.UploadID != "" {
 		defer s.Uploads.Remove(j.UploadID)
 	}
-	if canonical, err := pier.Canonical(ship.PierPath, s.Config.AllowedRoots, j.Kind != "import"); err != nil || canonical != ship.PierPath {
-		return errors.New("pier path changed or is outside permitted folders")
+	if err := pier.VerifyRegistered(ship.PierPath, j.Kind != "import"); err != nil {
+		return err
 	}
 	platform, e := vr.NativePlatform()
 	if e != nil {

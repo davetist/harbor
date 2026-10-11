@@ -19,7 +19,7 @@ func (s *Service) queueArchive(ctx context.Context, r Request) (model.ID, error)
 	if parent == "" {
 		parent = s.Config.AllowedRoots[0]
 	}
-	parent, e := pier.Canonical(parent, s.Config.AllowedRoots, false)
+	parent, e := pier.Canonical(parent, false)
 	if e != nil {
 		return "", e
 	}
@@ -30,7 +30,7 @@ func (s *Service) queueArchive(ctx context.Context, r Request) (model.ID, error)
 	if !localLabel.MatchString(label) || label == "." || label == ".." {
 		return "", errors.New("invalid import folder name")
 	}
-	destination, e := pier.Canonical(filepath.Join(parent, label), s.Config.AllowedRoots, true)
+	destination, e := pier.Canonical(filepath.Join(parent, label), true)
 	if e != nil {
 		return "", e
 	}
@@ -46,8 +46,8 @@ func (s *Service) executeArchive(ctx context.Context, j *model.Job) error {
 	if e != nil {
 		return e
 	}
-	if canonical, err := pier.Canonical(ship.PierPath, s.Config.AllowedRoots, true); err != nil || canonical != ship.PierPath {
-		return errors.New("import destination changed or is outside permitted folders")
+	if err := pier.VerifyRegistered(ship.PierPath, true); err != nil {
+		return err
 	}
 	archive, e := s.Uploads.ArchivePath(j.UploadID)
 	if e != nil {

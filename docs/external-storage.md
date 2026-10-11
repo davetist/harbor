@@ -1,10 +1,10 @@
 # External storage
 
-Harbor supports piers and its own data on a mounted local drive. It verifies the configured mount path and filesystem UUID **before creating any data/pier directories, taking a Harbor lock, opening SQLite or starting jobs**. A missing mount, replacement filesystem, unavailable identity or path escaping the pinned filesystem refuses startup.
+Harbor supports piers and its own data on a mounted local drive. Choose a pier folder on any mounted drive with the necessary OS permissions. Optional volume pins make Harbor verify the configured mount path and filesystem UUID **before creating any data/pier directories, taking a Harbor lock, opening SQLite or starting jobs**. A missing mount, replacement filesystem, unavailable identity or path escaping the pinned filesystem refuses startup.
 
 Configure the drive in the OS first, with a stable mount point and read/write access for the Harbor service user. On Linux, use a UUID-based mount and a filesystem suitable for Urbit, such as ext4. Harbor does not format or mount drives, edit fstab, grant permissions or configure swap. See the [Pi's external-storage guide](https://www.raspberrypi.com/documentation/computers/configuration.html#external-storage).
 
-The service user needs write access to the chosen Harbor data folder and its parent, where Harbor keeps its controller lock. It also needs access to the permitted pier folders and their parent directories. Set this ownership during drive setup; Harbor does not grant itself permissions.
+The service user needs write access to the chosen Harbor data folder and its parent, where Harbor keeps its controller lock. It also needs access to the chosen pier folders and their parent directories. Set this ownership during drive setup; Harbor does not grant itself permissions.
 
 Keep Harbor's executable and configuration accessible independently of the external drive. Once the drive is mounted, obtain its filesystem UUID:
 
@@ -31,9 +31,9 @@ Replace the example UUID with the drive's actual **filesystem UUID**, not its pa
 }
 ```
 
-On macOS, use the canonical mounted path, for example `/Volumes/Harbor`, in both `mountPoint` and `dataDir`. Default permitted pier folders are inside `dataDir/piers`. This configuration puts Harbor's database, runtime cache, uploads, backups and default piers on the pinned volume. An existing pier is registered in place; keyfile boot creates a new pier under the selected destination.
+On macOS, use the canonical mounted path, for example `/Volumes/Harbor`, in both `mountPoint` and `dataDir`. The default pier folder is `dataDir/piers`. This configuration puts Harbor's database, runtime cache, uploads, backups and default piers on the pinned volume. An existing pier is registered in place; keyfile boot creates a new pier under the selected destination.
 
-You can keep Harbor's database locally and put only piers on the drive by setting an external `allowedRoots` path and pinning the volume that contains it. Each pin must contain `dataDir` or an allowed root. Paths under `/mnt`, `/media`, `/run/media` and `/Volumes` require a corresponding pin; pinning `/` cannot substitute for a missing drive under those paths. For a drive mounted at another location, explicitly add its `requiredVolumes` entry too: a path alone cannot express which absent drive you intended.
+You can keep Harbor's database locally and put only piers on the drive by selecting a destination there. To additionally verify that drive at startup, set an external path in the legacy `allowedRoots` list and pin the volume that contains it. Each pin must contain `dataDir` or a path in that list. Configured storage paths under `/mnt`, `/media`, `/run/media` and `/Volumes` require a corresponding pin; pinning `/` cannot substitute for a missing drive under those paths. For a drive mounted at another location, explicitly add its `requiredVolumes` entry too: a path alone cannot express which absent drive you intended.
 
 ## Startup checks
 

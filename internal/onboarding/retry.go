@@ -19,7 +19,7 @@ func (s *Service) Retry(ctx context.Context, id, upload model.ID) (model.ID, err
 	if err != nil {
 		return "", err
 	}
-	if err = pier.VerifyRegistered(ship.PierPath, s.Config.AllowedRoots, j.Kind != "import"); err != nil {
+	if err = pier.VerifyRegistered(ship.PierPath, j.Kind != "import"); err != nil {
 		return "", err
 	}
 	if j.Kind == "boot_keyfile" {

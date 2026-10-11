@@ -84,7 +84,7 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 	if e != nil {
 		return m, e
 	}
-	if e = pier.VerifyRegistered(real, nil, false); e != nil {
+	if e = pier.VerifyRegistered(real, false); e != nil {
 		return m, e
 	}
 	parent, e := filepath.EvalSymlinks(filepath.Dir(destination))

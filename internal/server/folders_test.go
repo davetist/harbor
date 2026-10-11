@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"harbor/internal/model"
 	"harbor/internal/onboarding"
 	"net/http/httptest"
 	"net/url"
@@ -91,21 +93,91 @@ func TestFolderBrowserNavigatesTheActualHostTree(t *testing.T) {
 	}
 }
 
-func TestFolderBrowsingDoesNotAdmitAnImportOutsideStorageRoots(t *testing.T) {
-	h := handler(t)
-	root := t.TempDir()
-	piers, outside := filepath.Join(root, "piers"), filepath.Join(root, "outside")
-	os.Mkdir(piers, 0700)
-	os.Mkdir(outside, 0700)
-	h.cfg.AllowedRoots = []string{piers}
-	readFolders(t, h, outside)
-	h.AttachRuntime(nil, &onboarding.Service{Config: h.cfg})
-	body, _ := json.Marshal(map[string]any{"pierPath": outside, "loomExponent": 31, "loomConfirmed": true})
-	r := httptest.NewRequest("POST", "http://127.0.0.1:8789/api/v1/onboarding/existing", strings.NewReader(string(body)))
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-	if w.Code != 422 || !strings.Contains(w.Body.String(), "outside Harbor") {
-		t.Fatalf("browsing authorized an import: %d %s", w.Code, w.Body.String())
+func TestOnboardingAcceptsChosenFoldersOutsideDefaultRoots(t *testing.T) {
+	for _, mode := range []string{"comet", "keyfile", "existing", "archive"} {
+		t.Run(mode, func(t *testing.T) {
+			h := handler(t)
+			root, err := filepath.EvalSymlinks(t.TempDir())
+			if err != nil {
+				t.Fatal(err)
+			}
+			piers, outside := filepath.Join(root, "piers"), filepath.Join(root, "chosen folder & spaces")
+			for _, path := range []string{piers, outside} {
+				if err := os.Mkdir(path, 0700); err != nil {
+					t.Fatal(err)
+				}
+			}
+			h.cfg.AllowedRoots = []string{piers}
+			h.cfg.DefaultShipHTTPBindAddress = "127.0.0.1"
+			readFolders(t, h, outside)
+			boot := &onboarding.Service{Config: h.cfg, Store: h.store, Uploads: onboarding.Uploads{Dir: t.TempDir()}}
+			h.AttachRuntime(nil, boot)
+			req := onboarding.Request{PierPath: outside, FolderName: "chosen", LoomExponent: 31, LoomConfirmed: true}
+			wantPath := filepath.Join(outside, req.FolderName)
+			endpoint := mode
+			switch mode {
+			case "keyfile":
+				req.Name = "zod"
+				req.UploadID, err = boot.Uploads.StageKey(strings.NewReader("0w123abc"))
+				wantPath = filepath.Join(outside, "zod")
+			case "existing":
+				for _, path := range []string{".urb/chk", ".urb/log"} {
+					if err := os.MkdirAll(filepath.Join(outside, path), 0700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := os.WriteFile(filepath.Join(outside, ".urb/chk/image.bin"), []byte("fixture"), 0600); err != nil {
+					t.Fatal(err)
+				}
+				wantPath = outside
+			case "archive":
+				endpoint = "existing"
+				req.ImportArchive = true
+				req.UploadID, err = boot.Uploads.StageArchive(strings.NewReader("queued fixture"), 1024)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			body, err := json.Marshal(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := httptest.NewRequest("POST", "http://127.0.0.1:8789/api/v1/onboarding/"+endpoint, strings.NewReader(string(body)))
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if w.Code != 202 {
+				t.Fatalf("chosen folder rejected: %d %s", w.Code, w.Body.String())
+			}
+			var response struct {
+				JobID model.ID `json:"jobId"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+				t.Fatal(err)
+			}
+			ctx := context.Background()
+			job, err := h.store.GetJob(ctx, response.JobID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var ship model.Ship
+			if mode == "archive" {
+				ship, err = h.store.GetPendingImport(ctx, job.ShipID)
+			} else {
+				ship, err = h.store.GetShip(ctx, job.ShipID)
+			}
+			if err != nil || ship.PierPath != wantPath {
+				t.Fatalf("chosen location not preserved: %q, want %q (%v)", ship.PierPath, wantPath, err)
+			}
+			if mode != "archive" {
+				job.Phase = "failed"
+				if err := h.store.UpdateJob(ctx, job); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := boot.Retry(ctx, job.ID, req.UploadID); err != nil {
+					t.Fatalf("retry rejected chosen folder: %v", err)
+				}
+			}
+		})
 	}
 }
 
