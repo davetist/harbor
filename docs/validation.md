@@ -80,7 +80,7 @@ The login contract requires a fresh cookie, the exact same-origin `/session.js` 
 
 Retention regressions cover referenced uploads, pending imports, active jobs, recovery holds, minimum export retention with current integrity checks, corruption/changed-checkpoint refusal, canonical controller aliases, unknown files, changed/symlink targets, preview/apply and budget refusal. A separate CLI smoke check removed only expired disposable inputs after preview and preserved an unknown file. The live controller lock refused cleanup. No operator archive cleanup was performed.
 
-No native Intel host, physical external drive or valid disposable boot key was available for this run. Native CI is prepared, but those hardware/key acceptance gates remain open. Harbor's current [macOS distribution](macos-distribution.md) uses manual approval without Developer ID signing or notarization. The browser-download allowance was verified in the trial below; clean-Mac first installation and public-release download checks remain open.
+No native Intel host, physical external drive or valid disposable boot key was available for this run. Native CI is prepared, but those hardware/key acceptance gates remain open. Harbor's current [macOS distribution](macos-distribution.md) uses manual approval without Developer ID signing or notarization. Browser-download allowance and public-release download were verified in the trials below; clean-Mac first installation remains open.
 
 The [LMDB workaround maintenance note](lmdb-mapping-workaround.md) relates the adaptive policy to the [POSIX loom investigation](upstream/vere-loom-reservation-proposal.md), distinguishes ship-start coverage from utility processes, and defines the upstream ownership, native validation and default-capacity evidence required before retirement. Passing Harbor's selector tests alone does not establish those retirement gates.
 
@@ -96,7 +96,7 @@ Safari downloaded the exact `0.1.0-alpha.4-install.4` disk image over a temporar
 
 The documented `xattr -dr com.apple.quarantine "/Applications/Harbor.app"` command removed quarantine from all 12 affected app entries. Executable and signature contents were unchanged, and ad-hoc signature verification passed. Opening the same app through Finder then displayed Harbor's welcome screen. Its managed runner matched the downloaded binary and upgraded the existing `install.1` installation to `install.4`, retaining the exact configuration and empty registry. Quitting the interface left the same runner active; the downloaded volume was ejected successfully.
 
-This verifies an actual browser download, the blocked first launch and the command on this Apple Silicon Mac. The Mac already had an empty Harbor installation, and the candidate was served locally because no public binary release exists. First installation on a clean Mac, public-release download delivery, and the **Open Anyway** alternative still require their own trials.
+This verifies an actual browser download, the blocked first launch and the command on this Apple Silicon Mac. The Mac already had an empty Harbor installation, and the candidate was served locally because no public binary release existed at the time. First installation on a clean Mac and the **Open Anyway** alternative still require their own trials. Public-release download is recorded in the later trial below.
 
 ## macOS folder browsing — 2026-10-11
 
@@ -121,3 +121,13 @@ Safari freshly downloaded the exact `0.1.0-alpha.4-install.8` disk image from a 
 The first launch displayed **Harbor Not Opened** with Apple's unverified-download warning. The documented `xattr -dr com.apple.quarantine "/Applications/Harbor.app"` command exited 0 and removed all 12 quarantine attributes. Every bundle file remained unchanged and ad-hoc signature verification passed. Opening the downloaded app through Finder afterward displayed Harbor's welcome screen. The running app and copied runner were `install.8`; the runner matched the downloaded bundle. The same existing manager PID continued, and configuration and the empty ship registry were unchanged.
 
 This is a fresh browser-download and command-allowance trial on an Apple Silicon Mac already running `install.8`. It does not establish first installation on a clean Mac, public binary-release delivery, an upgrade from a different version, or the **Open Anyway** alternative. The separate installed-build trial above covers the preceding runner replacement and Browse checks.
+
+## Public Mac download and allowance — 2026-10-11
+
+Safari downloaded the universal disk image directly from the official [`v0.1.0-main.2` GitHub prerelease](https://github.com/davetist/harbor/releases/tag/v0.1.0-main.2), built from commit `21f683e7b9fd649f25c3f6ce061cbeda61e8db7e`. The Mac builder, package checks and publication job passed. The download's SHA-256 matched the published `SHA256SUMS`: `18129ad433c84bd3b31d3432bfd377a755caa31895300f7aa46f5a135bd13aab`. Disk-image integrity, universal ARM64/x86_64 executable architectures and ad-hoc signature verification passed.
+
+Finder copied the downloaded app into Applications and retained real Safari quarantine on all 12 app entries. The first launch displayed **Harbor Not Opened**; Done dismissed the warning. Running the documented `xattr -dr com.apple.quarantine "/Applications/Harbor.app"` command removed all 12 attributes without changing any bundle file. Signature verification still passed, and opening the same downloaded app afterward displayed Harbor's welcome screen.
+
+The app replaced the existing `install.8` runner with `0.1.0-main.2`; the previous runner exited and the new running executable matched the downloaded bundle. Configuration and the empty ship registry were unchanged. Served frontend assets matched the tested Browse build, and native Browse opened the folder navigator and cancelled without changing the form. Harbor was left open on its welcome screen. The previous app was kept as a rollback copy, and the temporary download volume was ejected.
+
+This verifies a public browser download, command allowance, managed version replacement and interface smoke check on this existing Apple Silicon Mac. It does not establish first installation on a clean Mac, native Intel execution, the **Open Anyway** alternative or real-ship lifecycle acceptance.
