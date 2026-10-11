@@ -7,6 +7,7 @@ export interface Job { id: string; shipId: string; kind: string; phase: string; 
 export type BootMode = 'comet' | 'keyfile' | 'existing'
 export interface BootRequest { mode: BootMode; folderName: string; name: string; pierPath: string; loomExponent: number; uploadId?: string; importArchive?: boolean; loomConfirmed?: boolean }
 export interface BackupRecord { id: string; shipId: string; createdAt: string; verified: boolean }
+export interface FolderListing { path: string; parent: string | null; entries: { name: string; path: string }[] }
 export interface HarborClient {
   jobs(id: string): Promise<Job[]>; jobLogs(id: string): Promise<string>;
   retryBoot(id: string, file?: File): Promise<string>;
@@ -17,5 +18,5 @@ export interface HarborClient {
   boot(request: BootRequest, file?: File): Promise<string>; action(id: string, operation: Operation): Promise<string>;
   job(id: string): Promise<Job>; schedules(id: string): Promise<Schedule[]>; saveSchedule(schedule: Schedule): Promise<void>;
   resize(id: string, rows: number, cols: number): Promise<void>; logs(id: string): Promise<string>; input(id: string, command: string): Promise<void>; accessCode(id: string): Promise<string>;
-  openURL(id: string): Promise<string>; folders(path?: string): Promise<string[]>;
+  openURL(id: string): Promise<string>; folders(path?: string): Promise<FolderListing>;
 }

@@ -23,4 +23,6 @@ Before starting work, Harbor recovers durable job state and preserves uncertain 
 
 The manager's `dataDir` contains SQLite, runtimes, uploads and backups. `allowedRoots` restricts pier paths but does not sandbox Vere or isolate clients/ships into OS accounts. The service and its children run with the service user's authority. Every admitted control client shares management authority; see the [security policy](../SECURITY.md).
 
+The folder browser reads the host's directory hierarchy with that OS user's permissions and returns the canonical directory, parent and child-folder entries. Browsing is independent of `allowedRoots`; onboarding and runtime operations continue to enforce that pier path policy. The browser exposes directory names and navigation, without reading file contents or granting filesystem permissions.
+
 The visual preview at `/preview.html` uses simulated data and localStorage. Production uses the real API. Preview tests demonstrate layout/state handling, not native ship behavior. Upstream `@urbit/sigil-js` renders supported short identities; unsupported identity classes get an explicit fallback rather than an invented sigil.

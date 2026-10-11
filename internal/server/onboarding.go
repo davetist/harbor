@@ -3,7 +3,6 @@ package server
 import (
 	"harbor/internal/model"
 	"harbor/internal/onboarding"
-	"harbor/internal/pier"
 	vr "harbor/internal/runtime"
 	"harbor/internal/supervisor"
 	"net/http"
@@ -68,32 +67,65 @@ func (s *Server) runtimeRoutes() {
 func (s *Server) folders(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		respond(w, 200, s.cfg.AllowedRoots)
+		var err error
+		path, err = os.UserHomeDir()
+		if err != nil {
+			fail(w, 422, "path", "The host user's home folder is unavailable.")
+			return
+		}
+	}
+	if !filepath.IsAbs(path) {
+		fail(w, 422, "path", "Choose an absolute folder path on the Harbor host.")
 		return
 	}
-	canonical, e := pier.Canonical(path, s.cfg.AllowedRoots, false)
-	if e != nil {
-		fail(w, 422, "path", "Choose a folder within the permitted roots on the Harbor host.")
+	canonical, err := filepath.EvalSymlinks(filepath.Clean(path))
+	if err != nil {
+		failFolder(w, err)
 		return
 	}
-	entries, e := os.ReadDir(canonical)
-	if e != nil {
-		fail(w, 422, "path", "Folder is unavailable.")
+	entries, err := os.ReadDir(canonical)
+	if err != nil {
+		failFolder(w, err)
 		return
 	}
-	out := []string{canonical}
+	type directory struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+	}
+	out := []directory{}
 	for _, entry := range entries {
-		if len(out) >= 256 {
-			break
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+			continue
 		}
-		if entry.IsDir() && entry.Name()[0] != '.' {
-			p := filepath.Join(canonical, entry.Name())
-			if real, e := pier.Canonical(p, s.cfg.AllowedRoots, false); e == nil {
-				out = append(out, real)
-			}
+		path := filepath.Join(canonical, entry.Name())
+		real, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			continue
+		}
+		info, err := os.Stat(real)
+		if err == nil && info.IsDir() {
+			out = append(out, directory{Name: entry.Name(), Path: real})
 		}
 	}
-	respond(w, 200, out)
+	var parent *string
+	if path := filepath.Dir(canonical); path != canonical {
+		parent = &path
+	}
+	// Browsing reads directory names with the service user's OS permissions.
+	// Import, boot and runtime operations retain their separate pier path policy.
+	respond(w, 200, struct {
+		Path    string      `json:"path"`
+		Parent  *string     `json:"parent"`
+		Entries []directory `json:"entries"`
+	}{canonical, parent, out})
+}
+
+func failFolder(w http.ResponseWriter, err error) {
+	if os.IsPermission(err) {
+		fail(w, 403, "path", "Harbor's OS user cannot open this folder.")
+	} else {
+		fail(w, 422, "path", "Folder is unavailable.")
+	}
 }
 func (s *Server) uploadKey(w http.ResponseWriter, r *http.Request) {
 	if s.onboarding == nil {

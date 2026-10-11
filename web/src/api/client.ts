@@ -1,5 +1,5 @@
 import { subscribeEvents } from './events'
-import type { BackupRecord, BootRequest, HarborClient, Host, Job, Operation, Schedule, Ship } from '../model'
+import type { BackupRecord, BootRequest, FolderListing, HarborClient, Host, Job, Operation, Schedule, Ship } from '../model'
 export class APIClient implements HarborClient {
   jobs(id: string) { return this.request<Job[]>(`/ships/${id}/jobs`) }
   async jobLogs(id: string) { return (await this.request<{output: string}>(`/jobs/${id}/logs`)).output }
@@ -33,5 +33,5 @@ export class APIClient implements HarborClient {
   input(id: string, input: string) { return this.request<void>(`/ships/${id}/terminal/input`, 'POST', { input }) }
   async accessCode(id: string) { return (await this.request<{code: string}>(`/ships/${id}/access-code`, 'POST', {})).code }
   async openURL(id: string) { return (await this.request<{url: string}>(`/ships/${id}/open`)).url }
-  folders(path = '') { return this.request<string[]>(`/folders?${new URLSearchParams({ path })}`) }
+  folders(path = '') { return this.request<FolderListing>(`/folders?${new URLSearchParams({ path })}`) }
 }

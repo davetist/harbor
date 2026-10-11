@@ -2,6 +2,8 @@
 
 Harbor's homepage shows registered ships, or onboarding when none exist. A keyfile boots fresh state; an existing pier preserves the ship's current state. They serve different purposes.
 
+**Browse** navigates folders on the computer running Harbor. The Mac app uses the macOS folder browser; the web interface and Linux desktop use Harbor's directory dialog, with parent navigation, breadcrumbs, Home, typed paths and a hidden-folder toggle. Choosing a folder confirms the path; cancelling keeps the previous value. Browsing respects the Harbor service user's OS read permissions. Import and boot additionally require the destination to be within a configured `allowedRoots` storage location. When controlling a Pi from another computer, the directory dialog browses the Pi's folders.
+
 ## Boot with a key
 
 Choose **Start with a key**, select the keyfile from your browser's computer, and choose a destination on the Harbor host under a permitted root. Harbor stages the key privately, resolves the verified native runtime, creates a new pier and waits for readiness. Consumed keys are removed after the job; abandoned keys are cleaned at startup after 24 hours. The new destination must not already exist.

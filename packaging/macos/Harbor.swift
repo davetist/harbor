@@ -9,7 +9,7 @@ struct RunnerStatus: Decodable {
 }
 
 @main
-final class HarborApplication: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate {
+final class HarborApplication: NSObject, NSApplicationDelegate, WKNavigationDelegate, WKUIDelegate, WKDownloadDelegate, WKScriptMessageHandlerWithReply {
     private var window: NSWindow!
     private var web: WKWebView?
     private var statusItem: NSStatusItem!
@@ -192,6 +192,7 @@ final class HarborApplication: NSObject, NSApplicationDelegate, WKNavigationDele
 
     private func loadInterface(_ url: URL) {
         let config = WKWebViewConfiguration()
+        config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "harborFolderPicker")
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = self
         view.uiDelegate = self
@@ -199,6 +200,36 @@ final class HarborApplication: NSObject, NSApplicationDelegate, WKNavigationDele
         web = view
         window.contentView = view
         view.load(URLRequest(url: url))
+    }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage, replyHandler: @escaping (Any?, String?) -> Void) {
+        guard message.name == "harborFolderPicker", message.webView === web, message.frameInfo.isMainFrame,
+              let source = message.frameInfo.request.url, let local = localURL,
+              source.scheme == local.scheme, source.host == local.host, source.port == local.port,
+              let request = message.body as? [String: Any], let path = request["path"] as? String,
+              path.count <= 4096, path.isEmpty || NSString(string: path).isAbsolutePath,
+              let mode = request["mode"] as? String, ["existing", "comet", "keyfile"].contains(mode),
+              window.attachedSheet == nil else {
+            replyHandler(nil, "The folder browser is unavailable for this page.")
+            return
+        }
+        let panel = NSOpenPanel()
+        panel.title = mode == "existing" ? "Choose a pier folder" : "Choose a destination"
+        panel.message = mode == "existing" ? "Select the folder containing your existing pier." : "Select the folder where your ship will be stored."
+        panel.prompt = "Choose Folder"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        // Creating ship folders belongs to onboarding; browsing does not modify disk.
+        panel.canCreateDirectories = false
+        var isDirectory: ObjCBool = false
+        if FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue {
+            panel.directoryURL = URL(fileURLWithPath: path, isDirectory: true)
+        }
+        panel.beginSheetModal(for: window) { result in
+            if result == .OK, let selected = panel.url { replyHandler(selected.path, nil) }
+            else { replyHandler(NSNull(), nil) }
+        }
     }
 
     private func confirm(_ title: String, detail: String, button: String) -> Bool {

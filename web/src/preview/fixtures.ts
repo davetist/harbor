@@ -43,5 +43,10 @@ export class PreviewClient implements HarborClient {
   async input(id: string, command: string) { this.data.logs[id] = (this.data.logs[id] || '') + '\n' + command + '[simulated terminal output]\n'; this.save() }
   async accessCode() { return 'sampel-code-for-the-preview' }
   async openURL() { return '/preview.html#ships' }
-  async folders() { return ['/srv/harbor/piers', '/srv/harbor/piers/sampel-palnet'] }
+  async folders(path = '/srv/harbor/piers') {
+    const tree: Record<string, string[]> = { '/': ['srv'], '/srv': ['harbor'], '/srv/harbor': ['piers'], '/srv/harbor/piers': this.data.ships.map(ship => ship.pierPath.slice(ship.pierPath.lastIndexOf('/') + 1)) }
+    const current = path || '/srv/harbor/piers'
+    if (!(current in tree) && !this.data.ships.some(ship => ship.pierPath === current)) throw new Error('Folder is unavailable in the visual preview.')
+    return { path: current, parent: current === '/' ? null : current.slice(0, current.lastIndexOf('/')) || '/', entries: (tree[current] || []).map(name => ({ name, path: `${current === '/' ? '' : current}/${name}` })) }
+  }
 }
