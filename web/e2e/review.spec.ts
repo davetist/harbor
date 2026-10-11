@@ -33,6 +33,7 @@ test('failed pre-launch setup can retry without registering another ship', async
   await page.route('**/api/v1/jobs/retry', route => route.fulfill({ json: { id: 'retry', shipId: ship.id, kind: 'boot_comet', phase: 'completed' } }))
   await page.goto('/#boot/failed')
   await expect(page.getByRole('alert')).toContainText('Runtime download failed.')
+  await expect(page.getByRole('status')).not.toContainText('This can take a few minutes.')
   await page.getByRole('button', { name: 'Retry setup' }).click()
   await expect(page.getByRole('heading', { name: 'Your ship is ready' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Open ship' })).toBeEnabled()

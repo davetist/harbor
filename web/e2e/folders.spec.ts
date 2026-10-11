@@ -24,6 +24,23 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
+for (const { mode, label } of [{ mode: 'existing', label: 'Pier folder' }, { mode: 'keyfile', label: 'Destination' }, { mode: 'comet', label: 'Destination' }]) {
+  test(`${mode} path field has its own accessible name`, async ({ page }) => {
+    await page.goto(`/#setup/${mode}`)
+    const path = page.getByRole('textbox', { name: label })
+    await expect(path).toHaveAccessibleName(label)
+    await path.fill('/storage/piers/ship')
+    await page.getByText(label, { exact: true }).click()
+    await expect(path).toBeFocused()
+    await page.getByRole('button', { name: 'Browse folders on host', exact: true }).click()
+    const browser = page.getByRole('dialog', { name: 'Browse folders' })
+    await expect(browser.getByRole('textbox', { name: 'Folder location' })).toHaveValue('/storage/piers/ship')
+    await page.keyboard.press('Escape')
+    await expect(browser).toHaveCount(0)
+    await expect(path).toHaveValue('/storage/piers/ship')
+  })
+}
+
 test('Browse uses the desktop picker and fills the selected host folder', async ({ page }) => {
   await page.addInitScript(() => {
     Object.assign(window, { webkit: { messageHandlers: { harborFolderPicker: { postMessage: async () => '/storage/piers/ship' } } } })
@@ -44,6 +61,26 @@ test('cancelling the desktop picker keeps the previous path', async ({ page }) =
   await expect(page.getByRole('textbox', { name: 'Pier folder' })).toHaveValue('/storage/piers/ship')
   await expect(page.getByRole('group', { name: 'Folders on Harbor host' })).toHaveCount(0)
 })
+
+for (const { outcome, selected } of [{ outcome: 'cancellation', selected: null }, { outcome: 'selection', selected: '/external/piers' }]) {
+  test(`desktop picker restores Browse focus after ${outcome}`, async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.assign(window, { webkit: { messageHandlers: { harborFolderPicker: { postMessage: () => new Promise<string | null>(resolve => { Object.assign(window, { finishFolderPicker: resolve }) }) } } } })
+    })
+    await page.goto('/#setup/existing')
+    const path = page.getByRole('textbox', { name: 'Pier folder', exact: true })
+    await path.fill('/storage/piers/ship')
+    const browse = page.getByRole('button', { name: 'Browse folders on host', exact: true })
+    await browse.click()
+    await expect(browse).toBeDisabled()
+    await expect(path).toHaveValue('/storage/piers/ship')
+    await page.evaluate(selection => { (window as Window & { finishFolderPicker: (path: string | null) => void }).finishFolderPicker(selection) }, selected)
+    await expect(browse).toBeEnabled()
+    await expect(path).toHaveValue(selected ?? '/storage/piers/ship')
+    await expect(browse).toBeFocused()
+    await expect(page.getByRole('dialog', { name: 'Browse folders' })).toHaveCount(0)
+  })
+}
 
 test('desktop Browse can select another folder while import still validates it', async ({ page }) => {
   await page.addInitScript(() => {
@@ -107,6 +144,41 @@ test('browser folder location accepts a typed path and recovers from unavailable
   await expect(browser).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Browse folders on host' })).toBeFocused()
 })
+
+for (const initialOutcome of ['opens', 'fails']) {
+  test(`browser folder location receives focus after the initial listing ${initialOutcome}`, async ({ page }) => {
+    let releaseInitial!: () => void
+    let releaseNavigation!: () => void
+    const initialResponse = new Promise<void>(resolve => { releaseInitial = resolve })
+    const navigationResponse = new Promise<void>(resolve => { releaseNavigation = resolve })
+    let requests = 0
+    await page.route('**/api/v1/folders?*', async route => {
+      const current = requests++
+      await (current === 0 ? initialResponse : navigationResponse)
+      if (current === 0 && initialOutcome === 'fails') return route.fulfill({ status: 422, json: { error: { message: 'Folder is unavailable.' } } })
+      return route.fallback()
+    })
+    await page.goto('/#setup/existing')
+    await page.getByRole('button', { name: 'Browse folders on host' }).click()
+    const browser = page.getByRole('dialog', { name: 'Browse folders' })
+    const location = browser.getByRole('textbox', { name: 'Folder location' })
+    await expect(browser).toBeVisible()
+    await expect(location).toBeDisabled()
+    releaseInitial()
+    await expect(location).toBeEnabled()
+    await expect(location).toBeFocused()
+    if (initialOutcome === 'fails') await expect(browser.getByRole('alert')).toContainText('Folder is unavailable.')
+
+    await browser.getByRole('button', { name: 'Home', exact: true }).click()
+    await expect(location).toBeDisabled()
+    const hidden = browser.getByRole('checkbox', { name: 'Show hidden folders' })
+    await hidden.focus()
+    releaseNavigation()
+    await expect(location).toHaveValue('/home/test-host')
+    await expect(location).toBeEnabled()
+    await expect(hidden).toBeFocused()
+  })
+}
 
 test('folder browser supports keyboard, narrow screens and accessible controls', async ({ page }) => {
   await page.goto('/#setup/existing')

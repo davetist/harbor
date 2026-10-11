@@ -14,9 +14,11 @@ export function Terminal({ ship, client }: { ship: Ship; client: HarborClient })
   useEffect(() => {
     if (!surface.current) return
     let active = true; let previous = ''; let loading = false
-    const terminal = new XTerm({ documentOverride: terminalDocument(), disableStdin: true, screenReaderMode: true, fontSize: 12, fontFamily: 'Menlo, monospace', scrollback: 2000, theme: { background: '#0a0a0b', foreground: '#b0b0b7', cursor: '#bbb' } })
+    const terminal = new XTerm({ documentOverride: terminalDocument(), disableStdin: true, convertEol: true, reflowCursorLine: true, screenReaderMode: true, fontSize: 12, fontFamily: 'Menlo, monospace', scrollback: 2000, theme: { background: '#0a0a0b', foreground: '#b0b0b7', cursor: '#bbb' } })
     const fit = new FitAddon(); terminal.loadAddon(fit); terminal.open(surface.current)
-    const resize = () => { fit.fit(); if (!selectedJob) void client.resize(ship.id, terminal.rows, terminal.cols).catch(() => undefined) }
+    const resize = () => fit.fit()
+    const rendered = terminal.onRender(resize)
+    const resized = terminal.onResize(({ rows, cols }) => { if (!selectedJob) void client.resize(ship.id, rows, cols).catch(() => undefined) })
     const observer = new ResizeObserver(resize); observer.observe(surface.current)
     const update = async () => {
       if (loading) return; loading = true
@@ -25,8 +27,8 @@ export function Terminal({ ship, client }: { ship: Ship; client: HarborClient })
       finally { loading = false }
     }
     void update(); const timer = window.setInterval(update, 750)
-    return () => { active = false; clearInterval(timer); observer.disconnect(); terminal.dispose() }
+    return () => { active = false; clearInterval(timer); observer.disconnect(); rendered.dispose(); resized.dispose(); terminal.dispose() }
   }, [client, ship.id, selectedJob])
   async function submit(event: React.FormEvent) { event.preventDefault(); try { await client.input(ship.id, command + '\n'); setCommand(''); setError('') } catch (e) { setError(e instanceof Error ? e.message : 'Input could not be sent.') } }
-  return <section className="terminal"><h2>{selectedJob ? 'Operation output' : 'Dojo'}</h2><label className="field-note">Output<select aria-label="Terminal output source" value={selectedJob} onChange={e => setSelectedJob(e.target.value)}><option value="">Live ship</option>{jobs.map(job => <option key={job.id} value={job.id}>{job.kind} · {job.phase} · {job.startedAt && new Date(job.startedAt).toLocaleString()}</option>)}</select></label><div className="terminal-surface" role="log" aria-label="Ship terminal output" ref={surface}/><ErrorMessage message={error || connectionError}/>{!selectedJob && <form onSubmit={submit}><label className="command"><span aria-hidden="true">{ship.name}:dojo&gt;</span><input aria-label="Dojo command" value={command} onChange={e => setCommand(e.target.value)} autoComplete="off" spellCheck={false} disabled={ship.state !== 'running'} maxLength={2000}/></label><button disabled={ship.state !== 'running' || !command}>Send ↵</button></form>}<p className="field-note">{selectedJob ? 'Retained output: up to 2 MiB per operation for the latest 100 jobs.' : 'Commands run directly on this ship.'}</p></section>
+  return <section className="terminal"><h2>{selectedJob ? 'Operation output' : 'Dojo'}</h2><label className="field-note">Output<select aria-label="Terminal output source" value={selectedJob} onChange={e => setSelectedJob(e.target.value)}><option value="">Live ship</option>{jobs.map(job => <option key={job.id} value={job.id}>{job.kind} · {job.phase} · {job.startedAt && new Date(job.startedAt).toLocaleString()}</option>)}</select></label><div className="terminal-surface" role="log" aria-label="Ship terminal output"><div className="terminal-viewport" ref={surface}/></div><ErrorMessage message={error || connectionError}/>{!selectedJob && <form onSubmit={submit}><label className="command"><span aria-hidden="true">{ship.name}:dojo&gt;</span><input aria-label="Dojo command" value={command} onChange={e => setCommand(e.target.value)} autoComplete="off" spellCheck={false} disabled={ship.state !== 'running'} maxLength={2000}/></label><button disabled={ship.state !== 'running' || !command}>Send ↵</button></form>}<p className="field-note">{selectedJob ? 'Retained output: up to 2 MiB per operation for the latest 100 jobs.' : 'Commands run directly on this ship.'}</p></section>
 }

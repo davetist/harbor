@@ -26,7 +26,7 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 for app_arch in arm64 amd64; do
  CGO_ENABLED=0 GOOS=darwin GOARCH="$app_arch" "$build_go" build -trimpath -buildvcs=false -ldflags "-X main.version=$app_version" -o "$stage/runner-$app_arch" ./cmd/harbor
  case "$app_arch" in arm64) swift_arch=arm64;; amd64) swift_arch=x86_64;; esac
- xcrun swiftc -parse-as-library -O -module-cache-path "$PWD/.tools/swift-module-cache" -target "$swift_arch-apple-macosx13.0" packaging/macos/Harbor.swift -o "$stage/app-$app_arch" -framework AppKit -framework WebKit
+ xcrun swiftc -parse-as-library -O -module-cache-path "$PWD/.tools/swift-module-cache" -target "$swift_arch-apple-macosx13.0" packaging/macos/Harbor.swift packaging/macos/HarborIcon.swift -o "$stage/app-$app_arch" -framework AppKit -framework WebKit
 done
 lipo -create "$stage/runner-arm64" "$stage/runner-amd64" -output "$app/Contents/Resources/harbor"
 lipo -create "$stage/app-arm64" "$stage/app-amd64" -output "$app/Contents/MacOS/Harbor"

@@ -4,6 +4,8 @@ import { ErrorMessage } from './components'
 
 export function FolderBrowser({ client, hostname, initialPath, choose, cancel }: { client: HarborClient; hostname: string; initialPath: string; choose: (path: string) => void; cancel: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const locationInput = useRef<HTMLInputElement>(null)
+  const initialFocusPending = useRef(true)
   const breadcrumbs = useRef<HTMLElement>(null)
   const request = useRef(0)
   const [listing, setListing] = useState<FolderListing>()
@@ -27,13 +29,19 @@ export function FolderBrowser({ client, hostname, initialPath, choose, cancel }:
     void navigate(initialPath)
     return () => { ++request.current; view.close() }
   }, [initialPath, navigate])
+  useEffect(() => {
+    if (!loading && initialFocusPending.current) {
+      initialFocusPending.current = false
+      locationInput.current?.focus()
+    }
+  }, [loading])
   const close = (path?: string) => { dialog.current?.close(); if (path !== undefined) choose(path); else cancel() }
   const parts = listing?.path.split('/').filter(Boolean) || []
   const entries = listing?.entries.filter(entry => showHidden || !entry.name.startsWith('.')) || []
   return <dialog ref={dialog} className="folder-browser" aria-labelledby="folder-browser-title" aria-describedby="folder-browser-host" onCancel={event => { event.preventDefault(); close() }}>
     <header><h2 id="folder-browser-title">Browse folders</h2><p id="folder-browser-host">Folders on {hostname}</p></header>
     <form className="folder-address" onSubmit={event => { event.preventDefault(); void navigate(location) }}>
-      <input aria-label="Folder location" autoFocus disabled={loading} value={location} onChange={event => setLocation(event.target.value)} spellCheck={false} autoComplete="off"/>
+      <input ref={locationInput} aria-label="Folder location" disabled={loading} value={location} onChange={event => setLocation(event.target.value)} spellCheck={false} autoComplete="off"/>
       <button type="submit" disabled={loading}>Go</button>
     </form>
     <div className="folder-toolbar">

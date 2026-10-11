@@ -28,6 +28,14 @@ HARBOR_GO=go sh packaging/macos/build-app.sh VERSION
 
 The builder compiles Intel/Apple Silicon Go runners and AppKit/WebKit shells, combines them with `lipo`, includes the existing Harbor icon and license notices, and creates the `.dmg` with an Applications shortcut and first-launch instructions. Output directories are immutable. The Mac app registers the same per-user LaunchAgent used by the CLI installer; the ship runner lives outside the app bundle and survives window close or interface quit.
 
+The app icon is rendered from the vector mark in `packaging/macos/HarborIcon.swift` at every standard and Retina icon size. The menu bar uses the same mark as a template image, which macOS colors for the current menu-bar appearance. To regenerate `Harbor.icns` after changing the mark:
+
+```sh
+xcrun swiftc -parse-as-library packaging/macos/HarborIcon.swift packaging/macos/build-icons.swift -o /tmp/harbor-build-icons -framework AppKit
+/tmp/harbor-build-icons /tmp/Harbor.iconset
+iconutil --convert icns --output packaging/macos/Harbor.icns /tmp/Harbor.iconset
+```
+
 The executable and bundle retain local **ad-hoc signatures** for Apple Silicon execution and integrity checks. These use no signing certificate, Apple account, keychain identity or notarization service, and do not identify Harbor as an Apple-verified download.
 
 Before publication, independently download the exact final disk image on a clean Mac, verify its checksum, drag into Applications, and test the documented manual approval, first launch, background permission, file upload/download, window-close independence, replacement upgrade and removal with retained data. Local developer-machine success is separate from this clean-download check.

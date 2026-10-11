@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { BootMode, BootRequest, HarborClient, Host } from '../model'
 import { Arrow, ErrorMessage } from '../components'
 import { chooseNativeFolder } from '../native'
@@ -8,6 +8,14 @@ export function Onboarding({ mode, host, client, values, change, back, booted }:
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
   const [folderBrowser, setFolderBrowser] = useState(false)
   const [browsing, setBrowsing] = useState(false)
+  const browseButton = useRef<HTMLButtonElement>(null)
+  const nativeFocusPending = useRef(false)
+  useEffect(() => {
+    if (!browsing && nativeFocusPending.current) {
+      nativeFocusPending.current = false
+      browseButton.current?.focus()
+    }
+  }, [browsing])
   const update = (key: keyof BootRequest, value: string | number) => change({ ...values, [key]: value })
   const title = { comet: 'Create a comet', keyfile: 'Boot from a keyfile', existing: 'Use an existing pier' }[mode]
   async function browse(path = values.pierPath || host.pierRoot || '') {
@@ -15,6 +23,7 @@ export function Onboarding({ mode, host, client, values, change, back, booted }:
     try {
       const selection = chooseNativeFolder(path, mode)
       if (selection) {
+        nativeFocusPending.current = true
         const selected = await selection
         if (selected) update('pierPath', selected)
       } else setFolderBrowser(true)
@@ -35,7 +44,7 @@ export function Onboarding({ mode, host, client, values, change, back, booted }:
       <p className="field-note">Folders are on {host.hostname}. Uploaded files come from this computer.</p>
       {archive ? <label>Pier archive<input className="file" type="file" accept=".gz,.tgz" aria-label="Pier archive" onChange={e => setFile(e.target.files?.[0])} required/></label> : <>
         {mode === 'comet' && <label>Folder name<input value={values.folderName} onChange={e => update('folderName', e.target.value)} placeholder="my-comet" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*"/><span className="field-note">A local label. Urbit generates the identity.</span></label>}
-        <label>{mode === 'existing' ? 'Pier folder' : 'Destination'}<div className="input-action"><input value={values.pierPath} placeholder={host.pierRoot ?? host.dataDir} onChange={e => update('pierPath', e.target.value)} required={mode === 'existing'}/><button type="button" aria-label="Browse folders on host" disabled={browsing} onClick={() => void browse()}>Browse</button></div></label>
+        <div className="path-field"><label htmlFor="pier-path">{mode === 'existing' ? 'Pier folder' : 'Destination'}</label><div className="input-action"><input id="pier-path" value={values.pierPath} placeholder={host.pierRoot ?? host.dataDir} onChange={e => update('pierPath', e.target.value)} required={mode === 'existing'}/><button ref={browseButton} type="button" aria-label="Browse folders on host" disabled={browsing} onClick={() => void browse()}>Browse</button></div></div>
       </>}
       <details className="advanced"><summary>Advanced settings <span>{2 ** (values.loomExponent - 30)} GiB loom</span></summary><label>Loom size<select value={values.loomExponent} onChange={e => update('loomExponent', Number(e.target.value))}>{(mode === 'existing' ? host.loomSizes : [31]).map(size => <option key={size} value={size}>{2 ** (size - 30)} GiB</option>)}</select></label><p className="field-note">Memory available to your ship. Harbor keeps this setting across restarts.</p></details>
       {mode === 'existing' && !archive && <label className="loom-confirm"><input type="checkbox" required checked={Boolean(values.loomConfirmed)} onChange={e => change({ ...values, loomConfirmed: e.target.checked })}/> This matches my pier’s original loom size.</label>}

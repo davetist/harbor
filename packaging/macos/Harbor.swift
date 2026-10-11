@@ -79,8 +79,10 @@ final class HarborApplication: NSObject, NSApplicationDelegate, WKNavigationDele
         editRoot.submenu = edit
         main.addItem(editRoot)
         NSApp.mainMenu = main
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusItem.button?.title = "Harbor"
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.image = HarborIcon.menuBarImage()
+        statusItem.button?.setAccessibilityLabel("Harbor")
+        statusItem.button?.toolTip = "Harbor"
         let statusMenu = NSMenu()
         stateItem = NSMenuItem(title: "Harbor is starting", action: nil, keyEquivalent: "")
         statusMenu.addItem(stateItem)
