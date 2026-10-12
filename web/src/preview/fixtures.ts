@@ -1,4 +1,4 @@
-import type { BootRequest, HarborClient, Host, Job, Operation, Schedule, Ship } from '../model'
+import type { BootRequest, HarborClient, HarborUpdate, Host, Job, Operation, Schedule, Ship } from '../model'
 const storageKey = 'harbor-visual-prototype-v1'
 interface PreviewData { ships: Ship[]; jobs: Job[]; schedules: Schedule[]; logs: Record<string, string> }
 function initial(): PreviewData {
@@ -6,7 +6,7 @@ function initial(): PreviewData {
     { id: 'preview-planet', name: '~sampel-palnet', nickname: '', pierPath: '/srv/harbor/piers/sampel-palnet', runtimePath: '/srv/harbor/runtimes/vere', loomExponent: 31, httpBindAddress: '127.0.0.1', webPort: 8080, desiredRunning: true, recoveryBlocked: false, recoveryBlockReason: '', state: 'running', error: '', pierBytes: 2.6 * 1024 ** 3, runtimeVersion: 'Vere 4.6' },
     { id: 'preview-moon', name: '~mister-dister', nickname: '', pierPath: '/srv/harbor/piers/mister-dister', runtimePath: '/srv/harbor/runtimes/vere', loomExponent: 31, httpBindAddress: '127.0.0.1', webPort: 8081, desiredRunning: false, recoveryBlocked: false, recoveryBlockReason: '', state: 'stopped', error: '', pierBytes: 940 * 1024 ** 2, runtimeVersion: 'Vere 4.6' },
   ]
-  const schedules: Schedule[] = ships.flatMap(ship => (['pack','meld','roll','chop'] as Operation[]).map((kind, i) => ({ id: `${ship.id}-${kind}`, shipId: ship.id, kind, intervalDays: kind === 'meld' ? 28 : 7, localTime: ['03:00','03:15','03:05','03:10'][i], timezone: 'Europe/Madrid', enabled: true, nextDue: '', lastResult: 'Example · last run completed', afterScheduleId: kind === 'chop' ? `${ship.id}-roll` : undefined })))
+  const schedules: Schedule[] = ships.flatMap(ship => (['pack','meld','roll','chop'] as Operation[]).map((kind, i) => ({ id: `${ship.id}-${kind}`, shipId: ship.id, kind, intervalDays: kind === 'meld' ? 28 : 7, localTime: ['03:00','03:05','03:10','03:15'][i], timezone: 'Europe/Madrid', enabled: true, nextDue: '', lastResult: 'Example · last run completed', afterScheduleId: kind === 'chop' ? `${ship.id}-roll` : undefined })))
   return { ships, jobs: [], schedules, logs: Object.fromEntries(ships.map(ship => [ship.id, 'vere: starting\nloom: mapped 2048MB\npier: loading ship state\nhttp: web interface ready\n\n' + ship.name + ':dojo>'])) }
 }
 export class PreviewClient implements HarborClient {
@@ -15,11 +15,13 @@ export class PreviewClient implements HarborClient {
   async retryBoot(): Promise<string> { throw new Error('Preview setup does not retry real registrations.') }
   async verifyRecovery() { throw new Error('Preview recovery cannot verify a real pier.') }
   async backups() { return [] }
+  async updates(): Promise<HarborUpdate> { return { currentVersion: '0.1.0-main.7', latestVersion: '0.1.0-main.7', comparisonKnown: true, available: false, prerelease: true, releaseURL: 'https://github.com/davetist/harbor/releases/tag/v0.1.0-main.7', checkedAt: new Date().toISOString() } }
   private data: PreviewData = JSON.parse(localStorage.getItem(storageKey) || 'null') || initial()
   private save() { localStorage.setItem(storageKey, JSON.stringify(this.data)) }
   async host(): Promise<Host> { return { hostname: 'harbor.local', platform: 'linux/arm64', dataDir: '/srv/harbor', pierRoot: '/srv/harbor/piers', allowedRoots: ['/srv/harbor/piers'], timezone: 'Europe/Madrid', loomSizes: [30,31,32], defaultShipHTTPBindAddress: '127.0.0.1', maintenanceProfile: 'Example · enabled by default; weekly Pack and Roll/Chop; 28-day conditional Meld; retains two epochs', maintenanceValidated: true } }
   async listShips() { return structuredClone(this.data.ships) }
   async ship(id: string) { const ship = this.data.ships.find(s => s.id === id); if (!ship) throw new Error('Ship not found.'); return structuredClone(ship) }
+  async measurePier(id: string) { const ship = this.data.ships.find(s => s.id === id); if (!ship) throw new Error('Ship not found.'); ship.measuredAt = new Date().toISOString(); this.save(); return structuredClone(ship) }
   async removeShip(id: string) {
     const ship = await this.ship(id)
     if (ship.recoveryBlocked) throw new Error("Resolve this ship's recovery hold before removing it from Harbor.")

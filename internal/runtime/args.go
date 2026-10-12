@@ -22,10 +22,14 @@ func BuildArgs(ship model.Ship, op model.Operation) ([]string, error) {
 		if ip == nil || ip.To4() == nil {
 			return nil, errors.New("explicit IPv4 HTTP listener required")
 		}
-		if ship.WebPort < 1024 || ship.WebPort > 65535 {
-			return nil, errors.New("ship port must be unprivileged")
+		args := []string{"--loom", loom, "--http-ip", ship.HTTPBindAddress}
+		if ship.WebPort != 0 {
+			if ship.WebPort != 80 && (ship.WebPort < 1024 || ship.WebPort > 65535) {
+				return nil, errors.New("ship HTTP port must be 80 or between 1024 and 65535")
+			}
+			args = append(args, "--http-port", strconv.Itoa(ship.WebPort))
 		}
-		return []string{"--loom", loom, "--http-ip", ship.HTTPBindAddress, "--http-port", strconv.Itoa(ship.WebPort), ship.PierPath}, nil
+		return append(args, ship.PierPath), nil
 	case "replay":
 		return []string{"play", "--full", "--loom", loom, ship.PierPath}, nil
 	case "update":

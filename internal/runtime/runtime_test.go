@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"harbor/internal/model"
 	"os"
 	"strings"
@@ -35,6 +36,24 @@ func TestUnsupportedLoomRejected(t *testing.T) {
 	_, e := BuildArgs(model.Ship{PierPath: "/test/pier", LoomExponent: 99, HTTPBindAddress: "127.0.0.1", WebPort: 8080}, "start")
 	if e == nil {
 		t.Fatal("invalid loom accepted")
+	}
+}
+
+func TestStartArgsAllowUnassignedHTTPPortAndPort80(t *testing.T) {
+	for _, port := range []int{0, 80} {
+		t.Run(fmt.Sprint(port), func(t *testing.T) {
+			args, err := BuildArgs(model.Ship{PierPath: "/test/pier", LoomExponent: 31, HTTPBindAddress: "127.0.0.1", WebPort: port}, "start")
+			if err != nil {
+				t.Fatal(err)
+			}
+			joined := strings.Join(args, " ")
+			if port == 0 && strings.Contains(joined, "--http-port") {
+				t.Fatal("unassigned port was passed to Vere", args)
+			}
+			if port == 80 && !strings.Contains(joined, "--http-port 80") {
+				t.Fatal("port 80 was not passed to Vere", args)
+			}
+		})
 	}
 }
 func TestMaintenanceReusesLoom(t *testing.T) {

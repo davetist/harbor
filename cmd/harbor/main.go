@@ -115,6 +115,7 @@ func run(args []string) error {
 		return e
 	}
 	handler := server.New(cfg, st, executor)
+	handler.SetVersion(version)
 	handler.AttachRuntime(sup, boot)
 	executor.OnChange = handler.Events.Publish
 	sup.OnLog = handler.Events.Publish

@@ -43,7 +43,7 @@ func ProfileFor(target vr.Platform, r Resources) (Profile, error) {
 	if !measured {
 		return Profile{}, ErrUnvalidatedTarget
 	}
-	return Profile{Name: "Weekly upkeep · 2 GiB loom", EnabledByDefault: true, Certified: true, RetainedEpochs: 2, Operations: []OperationProfile{{"pack", 7, "03:00", true, false}, {"meld", 28, "03:15", true, false}, {"roll", 7, "03:05", true, false}, {"chop", 7, "03:10", true, true}}}, nil
+	return Profile{Name: "Weekly upkeep · 2 GiB loom", EnabledByDefault: true, Certified: true, RetainedEpochs: 2, Operations: []OperationProfile{{"pack", 7, "03:00", true, false}, {"meld", 28, "03:05", true, false}, {"roll", 7, "03:10", true, false}, {"chop", 7, "03:15", true, true}}}, nil
 }
 func Preflight(target vr.Platform, r Resources, op model.Operation, running, scheduled bool) error {
 	if r.SnapshotBytes == 0 {

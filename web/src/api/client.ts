@@ -1,5 +1,5 @@
 import { subscribeEvents } from './events'
-import type { BackupRecord, BootRequest, FolderListing, HarborClient, Host, Job, Operation, Schedule, Ship } from '../model'
+import type { BackupRecord, BootRequest, FolderListing, HarborClient, HarborUpdate, Host, Job, Operation, Schedule, Ship } from '../model'
 export class APIClient implements HarborClient {
   jobs(id: string) { return this.request<Job[]>(`/ships/${id}/jobs`) }
   async jobLogs(id: string) { return (await this.request<{output: string}>(`/jobs/${id}/logs`)).output }
@@ -18,8 +18,10 @@ export class APIClient implements HarborClient {
     return response.status === 204 ? undefined as T : response.json()
   }
   host() { return this.request<Host>('/host') }
+  updates(manual = false) { return manual ? this.request<HarborUpdate>('/updates/check', 'POST', {}) : this.request<HarborUpdate>('/updates') }
   listShips() { return this.request<Ship[]>('/ships') }
   ship(id: string) { return this.request<Ship>(`/ships/${id}`) }
+  measurePier(id: string) { return this.request<Ship>(`/ships/${id}/measure`, 'POST', {}) }
   removeShip(id: string) { return this.request<void>(`/ships/${id}`, 'DELETE') }
   async boot(request: BootRequest, file?: File) {
     if (file) { const data = new FormData(); data.append('file', file); const upload = await this.request<{uploadId: string}>(`/uploads/${request.importArchive ? 'archive' : 'keyfile'}`, 'POST', data); request = { ...request, uploadId: upload.uploadId } }

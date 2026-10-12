@@ -125,6 +125,44 @@ func saveSchedule(ctx context.Context, tx *sql.Tx, v model.Schedule) error {
 	_, e = tx.ExecContext(ctx, "INSERT INTO schedules(id,ship_id,next_due,enabled,payload) VALUES(?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET next_due=excluded.next_due,enabled=excluded.enabled,payload=excluded.payload", v.ID, v.ShipID, v.NextDue.UTC().Format(time.RFC3339Nano), v.Enabled, string(b))
 	return e
 }
+
+func maintenanceOrder(kind model.Operation) int {
+	switch kind {
+	case "pack":
+		return 0
+	case "meld":
+		return 1
+	case "roll":
+		return 2
+	case "chop":
+		return 3
+	default:
+		return 4
+	}
+}
+
+// Saved clock times are eligibility times. Earlier stages scheduled on the
+// occurrence's maintenance day, or currently due after downtime, are claimed
+// first. Calendar dates avoid normalizing a nonexistent local midnight.
+func waitsForEarlierSchedule(schedules []model.Schedule, current model.Schedule, date string, now time.Time) (bool, error) {
+	zone, err := time.LoadLocation(current.Timezone)
+	if err != nil {
+		return false, err
+	}
+	_, err = time.Parse("2006-01-02", date)
+	if err != nil {
+		return false, err
+	}
+	for _, earlier := range schedules {
+		if earlier.ShipID == current.ShipID && earlier.Enabled && !earlier.NextDue.IsZero() && maintenanceOrder(earlier.Kind) < maintenanceOrder(current.Kind) {
+			if earlier.NextDue.In(zone).Format("2006-01-02") <= date || !earlier.NextDue.After(now) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 func (s *Store) ClaimDueAndEnqueue(ctx context.Context, now time.Time, next func(model.Schedule, time.Time) (time.Time, error)) ([]model.Job, error) {
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
@@ -139,9 +177,10 @@ func (s *Store) ClaimDueAndEnqueue(ctx context.Context, now time.Time, next func
 	if e != nil {
 		return nil, e
 	}
-	sort.SliceStable(schedules, func(i, j int) bool { return schedules[i].Kind != "chop" && schedules[j].Kind == "chop" })
+	sort.SliceStable(schedules, func(i, j int) bool { return maintenanceOrder(schedules[i].Kind) < maintenanceOrder(schedules[j].Kind) })
 	out := make([]model.Job, 0)
-	for _, sc := range schedules {
+	for i := range schedules {
+		sc := schedules[i]
 		if sc.NextDue.IsZero() || sc.NextDue.After(now) {
 			continue
 		}
@@ -177,6 +216,7 @@ func (s *Store) ClaimDueAndEnqueue(ctx context.Context, now time.Time, next func
 			if e = saveSchedule(ctx, tx, sc); e != nil {
 				return nil, e
 			}
+			schedules[i] = sc
 			continue
 		}
 		zone, e := time.LoadLocation(sc.Timezone)
@@ -184,6 +224,13 @@ func (s *Store) ClaimDueAndEnqueue(ctx context.Context, now time.Time, next func
 			return nil, e
 		}
 		date := due.In(zone).Format("2006-01-02")
+		waiting, e := waitsForEarlierSchedule(schedules, sc, date, now)
+		if e != nil {
+			return nil, e
+		}
+		if waiting {
+			continue // Retain NextDue until the earlier stage becomes eligible.
+		}
 		occurrence := model.NewID()
 		j := model.Job{ID: model.NewID(), ShipID: sc.ShipID, Kind: sc.Kind, Trigger: "scheduled", ScheduleID: sc.ID, OccurrenceID: occurrence, Phase: "queued"}
 		if sc.AfterScheduleID != "" {
@@ -232,6 +279,7 @@ func (s *Store) ClaimDueAndEnqueue(ctx context.Context, now time.Time, next func
 		if e = saveSchedule(ctx, tx, sc); e != nil {
 			return nil, e
 		}
+		schedules[i] = sc
 		if s.testClaimHook != nil {
 			if e = s.testClaimHook("advance"); e != nil {
 				return nil, e

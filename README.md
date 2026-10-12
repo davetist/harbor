@@ -46,7 +46,7 @@ Open **http://127.0.0.1:18789** on that computer, or **http://HOST-IP:18789** fr
 
 Choose **Start with a key**, **Try a comet**, or **Use an existing pier**. Existing folders belong to the computer running Harbor; uploaded files come from your browser's computer. Stop an existing ship in its previous runner before registering it.
 
-The default Harbor listener is IPv4 `0.0.0.0:18789`; ship HTTP ports start at 8080. Harbor validates Host and browser origins without filtering clients or interfaces by IP range. **There is no separate Harbor login: clients that can reach the control interface can control all ships.** Use a trusted LAN and external firewall or tailnet access rules; see [network configuration](docs/installation.md#network-access). Do not forward these ports publicly.
+The default Harbor listener is IPv4 `0.0.0.0:18789`; each ship start tries HTTP port 80, then 8080 upward. Stopped ships do not reserve ports. Harbor validates Host and browser origins without filtering clients or interfaces by IP range. **There is no separate Harbor login: clients that can reach the control interface can control all ships.** Use a trusted LAN and external firewall or tailnet access rules; see [network configuration](docs/installation.md#network-access). Do not forward these ports publicly.
 
 ## What it does
 

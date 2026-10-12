@@ -9,7 +9,8 @@ export function ShipSigil({ ship, size = 36 }: { ship: Ship; size?: number }) {
     const point = name.startsWith('~') ? name : `~${name}`
     if (!/^~(?:[a-z]{3}|[a-z]{6}|[a-z]{6}-[a-z]{6})$/.test(point) || !isValidPatp(point)) return undefined
     try {
-      return { point, svg: sigil({ point, size, foreground: '#eeeeee', background: '#000000', space: 'default', detail: size < 48 ? 'none' : 'default' }) }
+      // The stylesheet already sets display; upstream's inline style violates CSP.
+      return { point, svg: sigil({ point, size, foreground: '#eeeeee', background: '#000000', space: 'default', detail: size < 48 ? 'none' : 'default' }).replace('style="display: block;"', '') }
     } catch { return undefined }
   }, [ship.identity, ship.name, size])
   return image

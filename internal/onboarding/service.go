@@ -3,7 +3,6 @@ package onboarding
 import (
 	"context"
 	"errors"
-	"fmt"
 	"harbor/internal/config"
 	"harbor/internal/jobs"
 	"harbor/internal/model"
@@ -12,7 +11,6 @@ import (
 	"harbor/internal/scheduler"
 	"harbor/internal/store"
 	"harbor/internal/supervisor"
-	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -115,11 +113,7 @@ func (s *Service) create(ctx context.Context, r Request) (model.ID, error) {
 			return "", errors.New("stop the other runner before registering this pier")
 		}
 	}
-	port, e := s.availablePort(ctx)
-	if e != nil {
-		return "", e
-	}
-	ship := model.Ship{ID: model.NewID(), Name: name, Nickname: label, PierPath: canonical, LoomExponent: r.LoomExponent, HTTPBindAddress: s.Config.DefaultShipHTTPBindAddress, WebPort: port, State: "stopped"}
+	ship := model.Ship{ID: model.NewID(), Name: name, Nickname: label, PierPath: canonical, LoomExponent: r.LoomExponent, HTTPBindAddress: s.Config.DefaultShipHTTPBindAddress, State: "stopped"}
 	job := model.Job{ID: model.NewID(), ShipID: ship.ID, Kind: kind, Trigger: "manual", Phase: "queued", UploadID: r.UploadID}
 	if e = s.Store.RegisterQueued(ctx, ship, job, s.initialSchedules(ship)...); e != nil {
 		return "", errors.New("pier is already registered or metadata could not be saved")
@@ -212,7 +206,7 @@ func (s *Service) initialSchedules(ship model.Ship) []model.Schedule {
 	resources.RuntimeVersion = vr.StableVersion
 	target, _ := vr.NativePlatform()
 	profile, profileErr := scheduler.ProfileFor(target, resources)
-	operations := []scheduler.OperationProfile{{Kind: "pack", IntervalDays: 7, LocalTime: "03:00"}, {Kind: "meld", IntervalDays: 28, LocalTime: "03:15"}, {Kind: "roll", IntervalDays: 7, LocalTime: "03:05"}, {Kind: "chop", IntervalDays: 7, LocalTime: "03:10", AfterRoll: true}}
+	operations := []scheduler.OperationProfile{{Kind: "pack", IntervalDays: 7, LocalTime: "03:00"}, {Kind: "meld", IntervalDays: 28, LocalTime: "03:05"}, {Kind: "roll", IntervalDays: 7, LocalTime: "03:10"}, {Kind: "chop", IntervalDays: 7, LocalTime: "03:15", AfterRoll: true}}
 	if resourceErr == nil && profileErr == nil {
 		operations = profile.Operations
 	}
@@ -234,34 +228,4 @@ func (s *Service) initialSchedules(ship model.Ship) []model.Schedule {
 		rows = append(rows, row)
 	}
 	return rows
-}
-
-func (s *Service) availablePort(ctx context.Context) (int, error) {
-	ships, e := s.Store.ListShips(ctx)
-	if e != nil {
-		return 0, e
-	}
-	port := 8080
-	for {
-		used := false
-		for _, ship := range ships {
-			if ship.WebPort == port {
-				used = true
-				break
-			}
-		}
-		if !used {
-			l, err := net.Listen("tcp", net.JoinHostPort(s.Config.DefaultShipHTTPBindAddress, fmt.Sprint(port)))
-			if err == nil {
-				l.Close()
-				break
-			}
-		}
-		port++
-		if port > 65535 {
-			return 0, errors.New("no available ship HTTP port")
-		}
-	}
-
-	return port, nil
 }

@@ -34,6 +34,7 @@ type Supervisor struct {
 	launch    Launcher
 	mu        sync.Mutex
 	children  map[model.ID]*child
+	ports     map[int]bool
 	logs      map[model.ID]*LogBuffer
 	logErrors map[model.ID]bool
 	OnLog     func(model.Event)
@@ -44,7 +45,7 @@ func New(st *store.Store, l Launcher) *Supervisor {
 	if l == nil {
 		l = exec.Command
 	}
-	return &Supervisor{store: st, launch: l, children: make(map[model.ID]*child), logs: make(map[model.ID]*LogBuffer), logErrors: make(map[model.ID]bool)}
+	return &Supervisor{store: st, launch: l, children: make(map[model.ID]*child), ports: make(map[int]bool), logs: make(map[model.ID]*LogBuffer), logErrors: make(map[model.ID]bool)}
 }
 func (s *Supervisor) buffer(id model.ID) *LogBuffer {
 	s.mu.Lock()
@@ -105,12 +106,25 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 		return e
 	}
 	args = append(mapArgs, args...)
-	listener, e := net.Listen("tcp", net.JoinHostPort(ship.HTTPBindAddress, fmt.Sprint(ship.WebPort)))
+	port, releasePort, e := s.reserveHTTPPort(ctx, ship.HTTPBindAddress)
 	if e != nil {
 		release()
-		return errors.New("ship HTTP address or port is unavailable")
+		return e
 	}
-	listener.Close()
+	releasePier := release
+	release = func() { releasePort(); releasePier() }
+	ship.WebPort = port
+	portSet := false
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == "--http-port" {
+			args[i+1] = fmt.Sprint(port)
+			portSet = true
+			break
+		}
+	}
+	if !portSet {
+		args = append([]string{"--http-port", fmt.Sprint(port)}, args...)
+	}
 	digest, e := vr.FileDigest(ship.RuntimePath)
 	if e != nil {
 		release()

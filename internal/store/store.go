@@ -180,14 +180,63 @@ func (s *Store) GetJob(ctx context.Context, id model.ID) (model.Job, error) {
 	return decodeRow[model.Job](s.db.QueryRowContext(ctx, "SELECT payload FROM jobs WHERE id=?", id))
 }
 func (s *Store) ClaimJob(ctx context.Context) (model.Job, error) {
+	return s.claimJob(ctx, time.Now())
+}
+
+func (s *Store) claimJob(ctx context.Context, now time.Time) (model.Job, error) {
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return model.Job{}, e
 	}
 	defer tx.Rollback()
-	j, e := decodeRow[model.Job](tx.QueryRowContext(ctx, "SELECT j.payload FROM jobs j LEFT JOIN jobs dep ON dep.id=json_extract(j.payload,'$.dependsOnJobId') WHERE j.phase='queued' AND (dep.id IS NULL OR dep.phase IN ('completed','failed','skipped','interrupted')) ORDER BY j.sequence LIMIT 1"))
+	rows, e := tx.QueryContext(ctx, `SELECT j.payload FROM jobs j
+		LEFT JOIN jobs dep ON dep.id=json_extract(j.payload,'$.dependsOnJobId')
+		WHERE j.phase='queued' AND (dep.id IS NULL OR dep.phase IN ('completed','failed','skipped','interrupted'))
+		AND (j.trigger!='scheduled' OR NOT EXISTS (
+			SELECT 1 FROM jobs earlier WHERE earlier.ship_id=j.ship_id AND earlier.trigger='scheduled'
+			AND earlier.phase NOT IN ('completed','failed','skipped','interrupted')
+			AND CASE earlier.kind WHEN 'pack' THEN 0 WHEN 'meld' THEN 1 WHEN 'roll' THEN 2 WHEN 'chop' THEN 3 ELSE 4 END
+			  < CASE j.kind WHEN 'pack' THEN 0 WHEN 'meld' THEN 1 WHEN 'roll' THEN 2 WHEN 'chop' THEN 3 ELSE 4 END
+		)) ORDER BY j.sequence`)
 	if e != nil {
-		return j, e
+		return model.Job{}, e
+	}
+	candidates, e := decodeRows[model.Job](rows)
+	if e != nil {
+		return model.Job{}, e
+	}
+	var j model.Job
+	for _, candidate := range candidates {
+		if candidate.Trigger == "scheduled" {
+			current, err := decodeRow[model.Schedule](tx.QueryRowContext(ctx, "SELECT payload FROM schedules WHERE id=?", candidate.ScheduleID))
+			if err != nil {
+				return model.Job{}, err
+			}
+			var date string
+			if err = tx.QueryRowContext(ctx, "SELECT local_date FROM occurrences WHERE id=?", candidate.OccurrenceID).Scan(&date); err != nil {
+				return model.Job{}, err
+			}
+			rows, err := tx.QueryContext(ctx, "SELECT payload FROM schedules WHERE ship_id=? AND enabled=1", candidate.ShipID)
+			if err != nil {
+				return model.Job{}, err
+			}
+			schedules, err := decodeRows[model.Schedule](rows)
+			if err != nil {
+				return model.Job{}, err
+			}
+			waiting, err := waitsForEarlierSchedule(schedules, current, date, now)
+			if err != nil {
+				return model.Job{}, err
+			}
+			if waiting {
+				continue
+			}
+		}
+		j = candidate
+		break
+	}
+	if j.ID == "" {
+		return j, ErrNotFound
 	}
 	j.Phase = "preflight"
 	b, e := json.Marshal(j)

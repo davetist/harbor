@@ -81,10 +81,6 @@ func (s *Service) executeArchive(ctx context.Context, j *model.Job) error {
 	ship.RuntimePath = runtime.Path
 	ship.RuntimeVersion = "Vere " + vr.StableVersion
 	ship.DesiredRunning = true
-	ship.WebPort, e = s.availablePort(ctx)
-	if e != nil {
-		return e
-	}
 	if e = s.Store.PutShip(ctx, ship); e != nil {
 		return e
 	}

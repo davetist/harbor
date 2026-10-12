@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"harbor/internal/model"
 	"harbor/internal/pier"
+	vr "harbor/internal/runtime"
 	"net"
 	"net/http"
 	"os"
@@ -73,7 +74,7 @@ func bootstrapSupervisor(t *testing.T) (*Supervisor, model.Ship) {
 		t.Fatal(err)
 	}
 	ship.PierPath = filepath.Join(parent, "new-pier")
-	if err := st.PutShip(context.Background(), model.Ship{ID: "bootstrap", Name: "Comet", PierPath: ship.PierPath, RuntimePath: ship.RuntimePath, LoomExponent: 31, HTTPBindAddress: "127.0.0.1", WebPort: ship.WebPort}); err != nil {
+	if err := st.PutShip(context.Background(), model.Ship{ID: "bootstrap", Name: "Comet", PierPath: ship.PierPath, RuntimePath: ship.RuntimePath, LoomExponent: 31, HTTPBindAddress: "127.0.0.1"}); err != nil {
 		t.Fatal(err)
 	}
 	ship, _ = st.GetShip(context.Background(), "bootstrap")
@@ -107,7 +108,10 @@ func TestBootstrapReadinessRequiresPrivateWorkerIdentity(t *testing.T) {
 	s, ship := bootstrapSupervisor(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	args := []string{"--http-port", fmt.Sprint(ship.WebPort), ship.PierPath}
+	args, err := vr.BuildArgs(ship, "start")
+	if err != nil {
+		t.Fatal(err)
+	}
 	started := make(chan error, 1)
 	go func() { started <- s.LaunchNewShip(ctx, "", ship, args) }()
 	waitBootstrapHelper(t, ship.PierPath)

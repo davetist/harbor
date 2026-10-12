@@ -19,11 +19,14 @@ test('real service navigation, terminal and Open use the connected host', async 
   await page.getByRole('tab', { name: 'Maintenance' }).click()
   await expect(page.getByRole('button', { name: 'Run Pack now' })).toBeVisible()
   await page.screenshot({ path: '../output/playwright/real-pi-maintenance.png' })
+  const ships: { name: string; webPort: number }[] = await (await page.request.get(`${target}/api/v1/ships`)).json()
+  const current = ships.find(ship => ship.name === 'fake-zod')
+  expect(current).toBeDefined()
   const popup = page.waitForEvent('popup')
   await page.getByRole('button', { name: 'Open ship' }).click()
   const ship = await popup
   await ship.waitForLoadState()
-  expect(new URL(ship.url()).port).toBe('8080')
+  expect(new URL(ship.url()).port || '80').toBe(String(current!.webPort))
   await expect(ship.locator('input[type="password"]')).toBeVisible()
 })
 

@@ -13,6 +13,7 @@ import (
 	"harbor/internal/store"
 	"harbor/internal/supervisor"
 	"harbor/internal/ui"
+	"harbor/internal/updates"
 	"io"
 	"net"
 	"net/http"
@@ -26,17 +27,20 @@ type Actions interface {
 	Submit(context.Context, model.JobRequest) (model.ID, error)
 }
 type Server struct {
-	cfg        config.Config
-	store      *store.Store
-	actions    Actions
-	Events     *Broker
-	mux        *http.ServeMux
-	supervisor *supervisor.Supervisor
-	onboarding *onboarding.Service
+	cfg         config.Config
+	store       *store.Store
+	actions     Actions
+	Events      *Broker
+	mux         *http.ServeMux
+	supervisor  *supervisor.Supervisor
+	onboarding  *onboarding.Service
+	version     string
+	updateCheck func(context.Context, bool) updates.Status
 }
 
 func New(c config.Config, st *store.Store, a Actions) *Server {
 	s := &Server{cfg: c, store: st, actions: a, Events: NewBroker(), mux: http.NewServeMux()}
+	s.SetVersion("0.1.0-dev")
 	s.routes()
 	return s
 }
@@ -75,6 +79,7 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 	return errors.New("one JSON object required")
 }
 func (s *Server) routes() {
+	s.updateRoutes()
 	s.runtimeRoutes()
 	s.scheduleRoutes()
 	s.backupRoutes()
@@ -93,7 +98,7 @@ func (s *Server) routes() {
 		if validated {
 			description = "Enabled by default · weekly Pack and Roll/Chop · 28-day Meld when the snapshot reaches 512 MiB · retains two epochs · resource checks before every run"
 		}
-		respond(w, 200, map[string]any{"hostname": name, "managerPID": os.Getpid(), "platform": runtime.GOOS + "/" + runtime.GOARCH, "dataDir": s.cfg.DataDir, "pierRoot": s.cfg.AllowedRoots[0], "allowedRoots": s.cfg.AllowedRoots, "timezone": s.cfg.Timezone, "loomSizes": []int{30, 31, 32}, "defaultShipHTTPBindAddress": s.cfg.DefaultShipHTTPBindAddress, "maintenanceProfile": description, "maintenanceValidated": validated})
+		respond(w, 200, map[string]any{"hostname": name, "harborVersion": s.version, "managerPID": os.Getpid(), "platform": runtime.GOOS + "/" + runtime.GOARCH, "dataDir": s.cfg.DataDir, "pierRoot": s.cfg.AllowedRoots[0], "allowedRoots": s.cfg.AllowedRoots, "timezone": s.cfg.Timezone, "loomSizes": []int{30, 31, 32}, "defaultShipHTTPBindAddress": s.cfg.DefaultShipHTTPBindAddress, "maintenanceProfile": description, "maintenanceValidated": validated})
 	})
 	s.mux.HandleFunc("GET /api/v1/ships", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.store.ListShips(r.Context())
@@ -110,6 +115,7 @@ func (s *Server) routes() {
 		}
 	})
 	s.mux.HandleFunc("DELETE /api/v1/ships/{id}", s.removeShip)
+	s.mux.HandleFunc("POST /api/v1/ships/{id}/measure", s.measurePier)
 	s.mux.HandleFunc("GET /api/v1/jobs/{id}", func(w http.ResponseWriter, r *http.Request) {
 		v, e := s.store.GetJob(r.Context(), model.ID(r.PathValue("id")))
 		if errors.Is(e, store.ErrNotFound) {
