@@ -44,6 +44,8 @@ Free space is checked on the **actual pier volume**, including an external drive
 
 Harbor does not configure swap, mount or format storage, force-kill a utility, or change networking to make maintenance run. Utilities have no forced duration deadline. An intentionally stopped ship remains stopped when a scheduled occurrence is skipped. Successful maintenance restarts only a ship that was running beforehand.
 
+Maintenance restarts use the same 20-minute readiness deadline as normal starts. If the runtime does not confirm readiness, Harbor finishes the maintenance job as failed and shows the ship as needing attention instead of leaving it indefinitely starting. The successful utility outcome, tracked runtime and recovery hold remain available for inspection; the readiness deadline does not force-kill a writer or release its pier guard. See the [scheduled restart verification](validation/maintenance-restarts.md).
+
 ## Why these defaults
 
 On the disposable Pi fixture, the first Pack reclaimed 391.2 MiB of allocated space. Meld reclaimed another 10.1 MiB, then zero on two repeated passes, while still taking about 21 seconds each on the SD card. Roll added about 365 MiB per pass; paired Chop restored the two-epoch policy. This supports separating routine compaction, paired history retention, and less frequent conditional deduplication with less frequent deduplication.

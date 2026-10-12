@@ -15,21 +15,23 @@ import (
 )
 
 type Executor struct {
-	store         *store.Store
-	supervisor    *supervisor.Supervisor
-	mu            sync.Mutex
-	ready         bool
-	runMu         sync.Mutex
-	Hooks         map[model.Operation]func(context.Context, *model.Job) error
-	OnChange      func(model.Event)
-	verifyOffline func(context.Context, model.Ship, model.ID) error
-	resources     func(context.Context, string) (scheduler.Resources, error)
+	store            *store.Store
+	supervisor       *supervisor.Supervisor
+	mu               sync.Mutex
+	ready            bool
+	runMu            sync.Mutex
+	Hooks            map[model.Operation]func(context.Context, *model.Job) error
+	OnChange         func(model.Event)
+	verifyOffline    func(context.Context, model.Ship, model.ID) error
+	resources        func(context.Context, string) (scheduler.Resources, error)
+	readinessTimeout time.Duration
 }
 
 func New(st *store.Store, s *supervisor.Supervisor) *Executor {
 	e := &Executor{store: st, supervisor: s, Hooks: make(map[model.Operation]func(context.Context, *model.Job) error)}
 	e.verifyOffline = e.inspectOffline
 	e.resources = scheduler.ReadResources
+	e.readinessTimeout = 20 * time.Minute
 	return e
 }
 func (e *Executor) SetReady(ready bool) { e.mu.Lock(); defer e.mu.Unlock(); e.ready = ready }
@@ -160,7 +162,7 @@ func (e *Executor) RunOne(ctx context.Context) error {
 			ship.DesiredRunning = true
 			err = e.store.PutShip(ctx, ship)
 			if err == nil {
-				readyCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
+				readyCtx, cancel := context.WithTimeout(ctx, e.readinessTimeout)
 				err = e.supervisor.Start(readyCtx, j.ID, ship.ID)
 				cancel()
 			}
@@ -350,18 +352,13 @@ func (e *Executor) maintainWith(ctx context.Context, j *model.Job, ship model.Sh
 		if err = e.phase(ctx, j, "restarting"); err != nil {
 			return err
 		}
-		if err = e.supervisor.Start(ctx, j.ID, ship.ID); err != nil {
+		readyCtx, cancel := context.WithTimeout(ctx, e.readinessTimeout)
+		err = e.supervisor.Start(readyCtx, j.ID, ship.ID)
+		cancel()
+		if err != nil {
 			// A successful utility exit does not establish a usable pier when
 			// its restart fails. Preserve checkpoints and prevent startup retry.
-			current, readErr := e.store.GetShip(context.WithoutCancel(ctx), ship.ID)
-			if readErr != nil {
-				return errors.Join(err, readErr)
-			}
-			current.RecoveryBlocked = true
-			if current.RecoveryBlockReason == "" {
-				current.RecoveryBlockReason = "Utility completed but its restart failed. Pier and checkpoints remain held for recovery verification."
-			}
-			return errors.Join(err, e.store.PutShip(context.WithoutCancel(ctx), current))
+			return errors.Join(err, e.supervisor.HoldFailedRestart(context.WithoutCancel(ctx), ship.ID, err))
 		}
 	}
 	return nil

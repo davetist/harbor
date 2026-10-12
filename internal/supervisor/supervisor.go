@@ -253,18 +253,21 @@ func (s *Supervisor) wait(id model.ID, c *child) {
 	s.mu.Lock()
 	stopping := c.stopping
 	delete(s.children, id)
-	s.mu.Unlock()
 	ship, err := s.store.GetShip(context.Background(), id)
 	if err == nil {
-		if stopping && code == 0 {
+		if ship.RecoveryBlocked {
+			ship.State = "failed"
+		} else if stopping && code == 0 {
 			ship.State = "stopped"
 		} else {
 			ship.State = "failed"
 			ship.Error = "Runtime exited. Inspect the terminal before restarting."
 		}
-		if err = s.store.PutShip(context.Background(), ship); err == nil {
-			s.changed(ship)
-		}
+		err = s.store.PutShip(context.Background(), ship)
+	}
+	s.mu.Unlock()
+	if err == nil {
+		s.changed(ship)
 	}
 	close(c.done)
 }
@@ -306,12 +309,16 @@ func (s *Supervisor) Stop(ctx context.Context, id model.ID) error {
 	if identity != c.record.StartIdentity {
 		return errors.New("process identity changed; refusing to signal")
 	}
+	s.mu.Lock()
 	ship, e := s.store.GetShip(ctx, id)
-	if e != nil {
-		return e
+	if e == nil {
+		if !ship.RecoveryBlocked {
+			ship.State = "stopping"
+		}
+		e = s.store.PutShip(ctx, ship)
 	}
-	ship.State = "stopping"
-	if e = s.store.PutShip(ctx, ship); e != nil {
+	s.mu.Unlock()
+	if e != nil {
 		return e
 	}
 	// Vere's first boot can receive TERM before its pier is registered. That
@@ -398,7 +405,27 @@ func (s *Supervisor) ResizeTerminal(ctx context.Context, id model.ID, rows, cols
 	}
 	return pty.Setsize(c.tty, &pty.Winsize{Rows: rows, Cols: cols})
 }
+
+// HoldFailedRestart serializes recovery state with owned-process exit and stop
+// updates. A readiness failure must not be erased by a stale exit snapshot.
+func (s *Supervisor) HoldFailedRestart(ctx context.Context, id model.ID, failure error) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ship, err := s.store.GetShip(ctx, id)
+	if err != nil {
+		return err
+	}
+	ship.RecoveryBlocked = true
+	ship.State = "failed"
+	ship.Error = failure.Error()
+	if ship.RecoveryBlockReason == "" {
+		ship.RecoveryBlockReason = "Utility completed but its restart failed. Pier and checkpoints remain held for recovery verification."
+	}
+	return s.store.PutShip(ctx, ship)
+}
 func (s *Supervisor) hold(id model.ID, reason string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	v, e := s.store.GetShip(context.Background(), id)
 	if e == nil {
 		v.RecoveryBlocked = true
