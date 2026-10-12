@@ -43,8 +43,18 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 		return err
 	}
 	var latest *model.Job
+	var records []model.ProcessRecord
 	for i := range jobs {
 		if jobs[i].Phase == "interrupted" || jobs[i].Phase == "failed" {
+			records, err = e.store.ProcessesForJob(ctx, jobs[i].ID)
+			if err != nil {
+				return err
+			}
+			// Jobs rejected by this existing hold never launched a utility.
+			// They must not hide the operation whose outcome needs verification.
+			if isMaintenance(jobs[i].Kind) && jobs[i].Phase == "failed" && jobs[i].ExitCode == nil && len(records) == 0 && ship.RecoveryBlockReason != "" && jobs[i].Error == ship.RecoveryBlockReason {
+				continue
+			}
 			latest = &jobs[i]
 			break
 		}
@@ -57,13 +67,14 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	default:
 		return errors.New("this interrupted operation requires recovery from a pier archive without rolling back live network history")
 	}
-	records, err := e.store.ProcessesForJob(ctx, latest.ID)
-	if err != nil {
-		return err
-	}
 	confirmed := false
 	for _, p := range records {
 		if p.Operation == "verify" {
+			continue
+		}
+		// Maintenance can launch a ship after the utility exits. A closed
+		// restart is not another utility outcome; offline verification follows.
+		if p.Kind == "ship" && p.Operation == "start" && p.Phase == "exited" {
 			continue
 		}
 		if p.Kind != "utility" || p.Operation != latest.Kind || p.Phase != "exited" || p.ExitCode == nil || *p.ExitCode != 0 || p.PID <= 1 || p.StartIdentity == "" {
