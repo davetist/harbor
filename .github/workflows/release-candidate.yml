@@ -30,7 +30,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Build source, binary archives and Linux desktop/headless installers
         run: HARBOR_GO=go scripts/build-release.sh "$RELEASE_VERSION"
-      - run: go test -race ./... && go vet ./...
+      # Runtime helper packages share preferred HTTP ports during launch.
+      - run: go test -race -p 1 ./... && go vet ./...
       - run: npm --prefix web run typecheck && npm --prefix web run test && npm --prefix web audit
       - run: python3 scripts/test_installation_packages.py
       - name: Verify and stage Linux installers

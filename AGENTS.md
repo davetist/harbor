@@ -231,7 +231,7 @@ external firewall policy; do not add public forwarding or bypass those checks.
 After the embedded UI is built, routine code-change checks are:
 
 ```sh
-go test -race ./...
+go test -race -p 1 ./...
 go vet ./...
 npm --prefix web run typecheck
 npm --prefix web run test
@@ -240,6 +240,10 @@ go mod download all
 python3 scripts/collect-notices.py go
 python3 scripts/test_installation_packages.py
 ```
+
+Run Go test packages serially (`-p 1`) because runtime helpers in different
+packages share preferred HTTP ports during probe/launch. Keep the race detector
+and all packages enabled; package parallelism can create fixture port collisions.
 
 Run focused regressions first, then the applicable routine/CI checks; consult
 `.github/workflows/ci.yml` for platform builds and dependency advisories. For a

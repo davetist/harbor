@@ -59,6 +59,7 @@ func TestRuntimeUpdateProcess(t *testing.T) {
 	}
 	listener, err := net.Listen("tcp4", "127.0.0.1:"+port)
 	if err != nil {
+		fmt.Fprintln(os.Stderr, "runtime fixture listener:", err)
 		os.Exit(2)
 	}
 	if os.WriteFile(filepath.Join(path, ".http.ports"), []byte(port+" insecure loopback\n"), 0600) != nil {
@@ -194,7 +195,7 @@ func TestRuntimeUpdateWithoutExportRestoresRunningState(t *testing.T) {
 			}
 			job, err := st.GetJob(ctx, id)
 			if err != nil || job.Phase != "completed" || job.PriorRunning != running {
-				t.Fatalf("update did not complete without an export: %+v %v", job, err)
+				t.Fatalf("update did not complete without an export: %+v %v; runtime output: %s", job, err, ex.supervisor.Logs(ship.ID))
 			}
 			got, err := st.GetShip(ctx, ship.ID)
 			wantState := "stopped"
@@ -275,7 +276,7 @@ func TestCurrentRuntimeUpdateLeavesRunningShipUndisturbed(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := ex.supervisor.Start(ctx, "initial-start", ship.ID); err != nil {
-		t.Fatal(err)
+		t.Fatalf("%v; runtime output: %s", err, ex.supervisor.Logs(ship.ID))
 	}
 	before, err := st.ProcessesForJob(ctx, "initial-start")
 	if err != nil || len(before) != 1 {

@@ -28,7 +28,14 @@ tests and the complete `go test -race -count=1 -p 1 ./...` suite passed on
 native runtime startup failed `TestCurrentRuntimeUpdateLeavesRunningShipUndisturbed`
 with an early helper exit; the complete serialized rerun passed. Runtime helper
 fixtures and the native trial were then run separately. No assertions or checks
-were disabled.
+were disabled. The first hosted checks also exposed changing port availability:
+the Intel Mac port-reuse fixture found 8080 free, then selected 8081 at launch,
+while a Linux runtime-update helper exited before readiness. Concurrent helper
+packages using the same preferred ports are the likely cause of the port change;
+the Linux early exit alone does not establish its cause.
+CI and the documented test commands now serialize packages with `-p 1`, keeping
+the race detector and every package enabled. Runtime-update helper failures also
+include their listener diagnostics.
 
 Frontend build, typecheck and unit tests, the nine native-acceptance harness
 tests, four packaging tests, module downloads, notice collection and diff checks

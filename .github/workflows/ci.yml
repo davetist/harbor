@@ -29,7 +29,8 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm --prefix web ci
       - run: HARBOR_GO=go scripts/build.sh
-      - run: go test -race ./...
+      # Runtime helper packages share preferred HTTP ports during launch.
+      - run: go test -race -p 1 ./...
       - run: go vet ./...
       - run: python3 scripts/test_native_acceptance.py
       - name: Installation package contracts

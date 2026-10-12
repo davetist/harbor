@@ -9,7 +9,7 @@ Use Go 1.27.2 or newer, Node 24.x and npm. Install with `npm --prefix web ci`, t
 Before proposing a change, run:
 
 ```sh
-go test -race ./...
+go test -race -p 1 ./...
 go vet ./...
 npm --prefix web run typecheck
 npm --prefix web run test
@@ -17,6 +17,8 @@ go mod download all
 python3 scripts/collect-notices.py go
 python3 scripts/test_installation_packages.py
 ```
+
+Run Go test packages serially (`-p 1`): their runtime helpers share the preferred HTTP ports while probing and launching. Keep the race detector enabled. This prevents fixture instances from competing for those ports without omitting any packages or assertions.
 
 For installation changes, rebuild the runner and opt into a disposable OS-service trial with `HARBOR_NATIVE_INSTALL_TEST=1 HARBOR_INSTALL_BINARY="$PWD/dist/harbor" go test -v ./internal/installation -run TestNativeServiceLifecycle`. Supplying `HARBOR_INSTALL_UPGRADE_BINARY` adds a native replacement trial. The test creates a unique service and temporary empty registry, then verifies data-preserving removal. Keep clean-machine download/manual macOS approval, privileged package-manager and actual boot-without-login checks separate. Build the Mac shell with `HARBOR_GO=go sh packaging/macos/build-app.sh VERSION`; see [macOS distribution](docs/macos-distribution.md).
 
