@@ -13,7 +13,7 @@ if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?", version):
 destination = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else root / f"dist/harbor-{version}-source.tar.gz"
 if destination.exists():
     raise SystemExit("Source archive already exists; inspect rather than overwrite")
-files = [root / name for name in ("README.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
+files = [root / name for name in ("README.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md",
                                 "CHANGELOG.md", ".gitignore", "go.mod", "go.sum")]
 groups = {
     "cmd": {".go"}, "internal": {".go"},

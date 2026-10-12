@@ -60,11 +60,12 @@ class PackageTests(unittest.TestCase):
             builder.build("0.1.0", "arm64", self.binary, self.directory)
         self.assertEqual(deb.read_bytes(),original)
 
-    def test_source_archive_contains_every_desktop_build_input(self):
+    def test_source_archive_contains_agent_guide_and_desktop_build_inputs(self):
         source = self.directory / "source.tar.gz"
         subprocess.run(["python3",str(ROOT / "scripts/build-source.py"),"0.1.0",str(source)],check=True,stdout=subprocess.DEVNULL)
         with tarfile.open(source) as archive:
             names = set(archive.getnames())
+            self.assertEqual(archive.extractfile("harbor-0.1.0/AGENTS.md").read(), (ROOT / "AGENTS.md").read_bytes())
             for entry in ["packaging/macos/Harbor.swift","packaging/macos/Info.plist","packaging/macos/Harbor.icns","packaging/macos/build-app.sh","packaging/linux/harbor.desktop","packaging/linux/prerm","packaging/linux/postinst","scripts/build-linux.py","scripts/test_installation_packages.py","internal/installation/installation.go"]:
                 self.assertIn("harbor-0.1.0/"+entry,names)
             self.assertFalse(any(".harbor-work" in entry or ".tools" in entry or "node_modules" in entry for entry in names))
