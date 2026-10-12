@@ -122,6 +122,38 @@ func TestUpgradeNeedsExplicitFlagAndPreservesStoppedState(t *testing.T) {
 	}
 }
 
+func TestSameRunnerCanChangeInstallationFormatWithoutStarting(t *testing.T) {
+	m, home := fixture(t, "linux")
+	if err := m.Install(context.Background(), Options{NoStart: true}); err != nil {
+		t.Fatal(err)
+	}
+	payload, err := os.ReadFile(m.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldSource := m.Source
+	m.Source = filepath.Join(home, "other-package", "harbor")
+	if err := os.MkdirAll(filepath.Dir(m.Source), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(m.Source, payload, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := m.Install(context.Background(), Options{Upgrade: true}); err != nil {
+		t.Fatal(err)
+	}
+	r, err := m.readRecord()
+	if err != nil || r.Source != m.Source || r.Enabled {
+		t.Fatalf("installation format did not transfer its source: %+v %v", r, err)
+	}
+	if err := m.Uninstall(context.Background(), oldSource); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(m.Paths.Binary); err != nil {
+		t.Fatal("old format removed the new installation", err)
+	}
+}
+
 func TestFailedServiceStopPreservesInstalledFiles(t *testing.T) {
 	m, _ := fixture(t, "linux")
 	if err := m.Install(context.Background(), Options{NoStart: true}); err != nil {

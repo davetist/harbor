@@ -5,7 +5,7 @@
 Initial experimental Harbor implementation and publication preparation. No public release has been published.
 
 - Universal Mac app/disk image with automatic user-service setup, native file pickers/downloads, persistent background operation and explicit stop/uninstall controls.
-- Debian/Ubuntu desktop packages with application-menu launch/stop/removal, plus offline one-command ARM64/amd64 headless installers.
+- Linux `.deb` and offline `.run` formats with the same CLI, application-menu launch/stop/removal, and startup without login on ARM64/amd64. Debian archives include parent directories so fresh package installation succeeds.
 - Managed installation records, data-preserving upgrades/removal, previous-runner rollback, logged-out-user package handling and service-PID readiness checks.
 - macOS distribution without Developer ID signing or notarization, with manual first-launch approval and a Harbor-only quarantine command included in the disk image and installation guide.
 - Native installation lifecycle acceptance on Apple Silicon and Raspberry Pi, plus a real Safari download, blocked macOS launch, documented quarantine command and successful native launch/upgrade. Clean-Mac first installation, public-release delivery and privileged desktop-package/boot trials remain separate gates.

@@ -2,4 +2,6 @@ package main
 
 import "errors"
 
-func maintainPackageUsers([]byte, string) error { return errors.New("Debian packages require Linux") }
+func maintainPackageUsers([]byte, string, string) error {
+	return errors.New("system installation requires Linux")
+}

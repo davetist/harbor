@@ -200,17 +200,19 @@ func TestConcurrentBackgroundChecksShareOneReleaseRequest(t *testing.T) {
 
 func TestCheckFindsMatchingLinuxInstaller(t *testing.T) {
 	for _, platform := range []string{"linux/amd64", "linux/arm64"} {
-		t.Run(platform, func(t *testing.T) {
-			checker := fixtureChecker(t, "0.1.0-main.9", func(w http.ResponseWriter, r *http.Request) {
-				release := publishedRelease("v0.1.0-main.10", true)
-				release["assets"].([]map[string]any)[0]["name"] = "harbor-0.1.0-main.10-" + strings.ReplaceAll(platform, "/", "-") + ".run"
-				json.NewEncoder(w).Encode([]any{release})
+		for _, format := range []string{".deb", ".run"} {
+			t.Run(platform+format, func(t *testing.T) {
+				checker := fixtureChecker(t, "0.1.0-main.9", func(w http.ResponseWriter, r *http.Request) {
+					release := publishedRelease("v0.1.0-main.10", true)
+					release["assets"].([]map[string]any)[0]["name"] = "harbor-0.1.0-main.10-" + strings.ReplaceAll(platform, "/", "-") + format
+					json.NewEncoder(w).Encode([]any{release})
+				})
+				checker.platform = platform
+				status := checker.Check(context.Background(), false)
+				if !status.Available || status.LatestVersion != "0.1.0-main.10" {
+					t.Fatalf("matching Linux installer missing: %+v", status)
+				}
 			})
-			checker.platform = platform
-			status := checker.Check(context.Background(), false)
-			if !status.Available || status.LatestVersion != "0.1.0-main.10" {
-				t.Fatalf("matching Linux installer missing: %+v", status)
-			}
-		})
+		}
 	}
 }

@@ -25,7 +25,7 @@ for release_os in darwin linux; do
   CGO_ENABLED=0 GOOS="$release_os" GOARCH="$release_arch" "$build_go" build -trimpath -buildvcs=false -ldflags "-X main.version=$release_version" -o "$stage/$artifact/harbor" ./cmd/harbor
   cp README.md LICENSE CONTRIBUTING.md SECURITY.md CHANGELOG.md dist/THIRD_PARTY_NOTICES.txt "$stage/$artifact/"
   cp -R docs "$stage/$artifact/docs"
-  case "$release_os" in darwin) cp packaging/macos/install.sh packaging/macos/uninstall.sh "$stage/$artifact/";; linux) cp packaging/linux/* "$stage/$artifact/";; esac
+  case "$release_os" in darwin) cp packaging/macos/install.sh packaging/macos/uninstall.sh "$stage/$artifact/";; linux) cp packaging/linux/* "$stage/$artifact/"; cp web/public/harbor-logo.svg "$stage/$artifact/harbor.svg";; esac
   if [ "$release_os" = linux ]; then python3 scripts/build-linux.py "$release_version" "$release_arch" "$stage/$artifact/harbor" "$stage"; fi
   python3 - "$stage/$artifact" "$stage/$artifact.tar.gz" <<'PY'
 import gzip,pathlib,sys,tarfile

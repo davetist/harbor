@@ -4,6 +4,8 @@ Harbor supports piers and its own data on a mounted local drive. Choose a pier f
 
 Configure the drive in the OS first, with a stable mount point and read/write access for the Harbor service user. On Linux, use a UUID-based mount and a filesystem suitable for Urbit, such as ext4. Harbor does not format or mount drives, edit fstab, grant permissions or configure swap. See the [Pi's external-storage guide](https://www.raspberrypi.com/documentation/computers/configuration.html#external-storage).
 
+For Linux startup before login, order the direct drive mount before the service user's `user@UID.service`, using the actual numeric user ID. Do not rely solely on an on-demand automount: Harbor checks volume identity before accessing its data folders, so an untriggered automount can refuse startup. If the drive is optional for OS boot, retain a bounded device timeout and `nofail`; Harbor must still refuse startup while its required volume is absent.
+
 The service user needs write access to the chosen Harbor data folder and its parent, where Harbor keeps its controller lock. It also needs access to the chosen pier folders and their parent directories. Set this ownership during drive setup; Harbor does not grant itself permissions.
 
 Keep Harbor's executable and configuration accessible independently of the external drive. Once the drive is mounted, obtain its filesystem UUID:
@@ -45,6 +47,6 @@ You can keep Harbor's database locally and put only piers on the drive by select
 
 Linux reads `/proc/self/mountinfo` and matches the active filesystem's device numbers against `/dev/disk/by-uuid`; it needs no root access or new utility. If UUID metadata is unavailable, it refuses startup. macOS uses the built-in `diskutil info -plist` to obtain the mounted path and Volume UUID; failure to obtain metadata also refuses startup. The metadata checks have a 10-second startup context.
 
-These are startup and path-identity checks. They do not promise recovery from a physical USB disconnect, forced unmount, failed enclosure, power loss or filesystem corruption. Startup never falls back to another filesystem when a required volume cannot be verified. Actual-drive performance and physical failure tests remain pending until the intended drive is available.
+These are startup and path-identity checks. They do not promise recovery from a physical USB disconnect, forced unmount, failed enclosure, power loss or filesystem corruption. Startup never falls back to another filesystem when a required volume cannot be verified. A physical Pi ARM64 SSD passed USB 2 boot-before-login and write/read checks; its USB 3 failure remains unresolved. See the [dated storage trial](validation.md#linux-installer-formats--2026-10-12) for that limited evidence. Representative active-ship performance and broader physical failure acceptance remain open.
 
 Archive uploads require a Harbor integrity manifest; arbitrary tar archives are unsupported. To migrate a complete pier from another runner, stop it, copy the folder including hidden files to the mounted drive, then register **Existing folder** with its original loom requirement. See [onboarding](onboarding.md).

@@ -10,7 +10,9 @@ Closing the window or choosing **Quit Harbor Interface** leaves the runner and s
 
 In the Mac app, **Browse** opens the normal macOS folder browser. In a web browser, including the Linux desktop launcher's browser, it opens Harbor's directory browser for the machine running Harbor. Open folders, go up to parents, use breadcrumbs or Home, or enter an absolute path and press Go. Hidden folders can be shown. **Use this folder** confirms the current directory; Cancel or Escape keeps the existing form value. Listings come from the host filesystem using the service user's OS permissions, including outside the configured pier roots. Import and boot still validate the selected path against `allowedRoots`; browsing does not change the configuration. Add another storage location to `allowedRoots` and restart the runner before using it.
 
-On **Debian/Ubuntu desktop**, install the `.deb` matching your CPU using your software installer, then open **Harbor** from the application menu. First launch creates the configuration and user service and opens your default browser. Closing the browser leaves ships running. The launcher's **Stop Harbor and ships** and **Uninstall Harbor** actions use graphical confirmation. Package installation/removal uses the OS administrator prompt; ship data remains in the original user's folders. The `.deb` depends on systemd, xdg-utils, Zenity and pkexec. Other Linux distributions can use the binary archives with a systemd user session; no RPM/AppImage is supplied.
+On Linux, both `.deb` and `.run` install the same command, application-menu launcher, and background runner. Choose `.deb` for Debian, Ubuntu, or Raspberry Pi OS and `.run` for other systemd distributions. Both work over SSH and on a desktop; no desktop/headless edition must be selected.
+
+After installing a `.deb` matching your CPU through the software installer or `sudo apt install ./harbor-VERSION-linux-arm64.deb`, open **Harbor** from the application menu or run `harbor install` as your ordinary user. Substitute `amd64` on Intel/AMD. Setup creates the configuration and user service, enables startup at boot, and opens your default browser when launched graphically. `harbor desktop` opens the same interface later. Closing the browser leaves ships running. The launcher's **Stop Harbor and ships** and **Uninstall Harbor** actions use graphical confirmation. Package installation/removal uses the OS administrator prompt; ship data remains in the original user's folders. The `.deb` depends on systemd, xdg-utils, Zenity and pkexec. No RPM/AppImage is supplied.
 
 The Mac candidate can be built with `HARBOR_GO=go sh packaging/macos/build-app.sh VERSION`; the complete release build also produces Linux `.deb` and `.run` installers. See [macOS distribution](macos-distribution.md) for build details and download acceptance.
 
@@ -26,7 +28,7 @@ xattr -dr com.apple.quarantine "/Applications/Harbor.app"
 
 Open Harbor again. This removes the download quarantine attribute only from Harbor and its bundled files. If you chose another installation folder, use its actual app path. The disk image's **Install Harbor.txt** includes these instructions; a newer download may require approval again.
 
-## Headless Linux and Raspberry Pi
+## Standalone Linux installer
 
 Download the `.run` matching the machine (`arm64` for a 64-bit Pi, `amd64` for Intel/AMD), then run this one installation command as your ordinary user:
 
@@ -34,9 +36,11 @@ Download the `.run` matching the machine (`arm64` for a 64-bit Pi, `amd64` for I
 sh harbor-VERSION-linux-arm64.run
 ```
 
-The installer contains the runner and license notices, verifies its embedded payload, creates the default configuration, copies the runner, registers and starts a user systemd service, and prints the local and trusted-network browser addresses. It needs no compiler, Node, database daemon or installation-time network download. The host needs systemd with a normal user/SSH login session.
+The installer verifies its embedded payload and installs a system-owned runner under `/usr/local/lib/harbor`, the `harbor` command under `/usr/local/bin`, and the desktop launcher, icon, and license notices under `/usr/local/share`. It then creates the default configuration, copies the private runner, registers and starts a user systemd service, and prints the local and trusted-network browser addresses. It needs no compiler, Node, database daemon or installation-time network download. The host needs systemd with a normal user/SSH login session, sudo, runuser, flock, and sha256sum. Desktop launch requires a browser, xdg-utils and Zenity; graphical removal also requires pkexec. The installer does not add a desktop environment to an SSH-only machine.
 
-To keep the user service running after logout and start it at boot, the same command enables user lingering through `loginctl`, requesting ordinary administrator approval through `sudo` if needed. It fails clearly if that approval cannot be obtained; it does not change sudoers or authentication. Lingering remains enabled on removal because other user services may depend on it. Desktop installs normally start with the login session; `harbor install --headless` opts an existing Linux installation into boot without login. Initial SSH access and external network policy remain the operator's responsibility.
+System file installation requests administrator approval through sudo. Both Linux formats enable user lingering through `loginctl` during user setup so Harbor starts at boot and survives logout, requesting administrator approval if needed. Setup fails clearly if that approval cannot be obtained; it does not change sudoers or authentication. Lingering remains enabled on removal because other user services may depend on it. The old `--desktop` installer flag is accepted for compatibility and uses the same setup. Initial SSH access and external network policy remain the operator's responsibility.
+
+Use one Linux format at a time. Before switching, remove the previous system installation using the removal command below; it stops its services and retains configuration and ship data. Then install the other format and run `harbor install` or open Harbor. The installers refuse conflicting integration instead of leaving an older command or launcher ahead of the new one. Standalone system directories and their ancestors must belong to root and must not grant other users write access.
 
 ## Foreground operation
 
@@ -94,7 +98,7 @@ This affects new registrations; existing ships retain saved bindings. There is n
 
 ## Background service
 
-Binary archives also include `install.sh` and `uninstall.sh`. On Mac, `sh ./install.sh` creates defaults and installs the user service. On Linux it installs for headless use; `sh ./install.sh --desktop` skips the boot-without-login step. The direct command is `./harbor install` (add `--headless` on a headless Linux host).
+Binary archives also include `install.sh` and `uninstall.sh`. On Mac, `sh ./install.sh` creates defaults and installs the user service. On Linux it supplies the same system command, desktop launcher, and boot service as the `.run`. The direct command `./harbor install` installs only that binary's user service; Linux setup enables boot without login by default. Advanced source users can opt out of lingering with `--headless=false`.
 
 To keep an existing advanced configuration, pass its absolute path:
 
@@ -116,7 +120,7 @@ Update checks run through the Harbor service and require access to GitHub's publ
 
 On Mac, replace the app in Applications with the newer download and open it; repeat the [macOS approval](#allow-harbor-on-macos) if requested. Harbor gracefully stops its installed runner if its bundled version changed, replaces the copied executable, and restarts it with the same configuration. On Debian/Ubuntu, a package upgrade updates only per-user installations originating from that package. Deliberately stopped services remain stopped; logged-out users retain their next-login startup preference. A failed candidate startup attempts restoration of the previous runner. Interrupted/uncertain replacements preserve the previous executable and fail closed for inspection.
 
-For a headless installation, run the newer `.run` with `--upgrade`. For a binary archive, run the newer binary's `harbor install --upgrade`. There is no network self-updater; runtime updates inside Harbor update Vere, rather than the Harbor application.
+For a standalone Linux installation, run the newer `.run` with `--upgrade`, or `sh ./install.sh --upgrade` from a newer Linux binary archive. System installation updates only user services originating from that exact system runner. For a direct binary's user service, run the newer binary's `harbor install --upgrade`. There is no network self-updater; runtime updates inside Harbor update Vere, rather than the Harbor application.
 
 Advanced service controls:
 
@@ -127,7 +131,7 @@ harbor service start
 harbor service uninstall
 ```
 
-`sh ./uninstall.sh` performs the same managed service removal. On Linux desktop, use the launcher action or remove the package through your software installer. Package removal stops and removes only registrations originating from that package, including those of logged-out users. Custom/archive installs are preserved. Removal preserves piers, archives, configuration and database. Inspect retained data separately; uninstalling is not secure erasure.
+`harbor service uninstall` removes only the current user's service and private runner. To remove Linux system files as well, use the launcher action, remove a `.deb` through your software installer, or run `sudo sh /usr/local/lib/harbor/system-install.sh --uninstall` for a standalone installation. The Linux archive's `sh ./uninstall.sh` also removes its system installation. System removal stops and removes only registrations originating from that exact system runner, including those of logged-out users. Other-source installations are preserved. Removal preserves piers, archives, configuration and database. Inspect retained data separately; uninstalling is not secure erasure.
 
 ## Troubleshooting
 

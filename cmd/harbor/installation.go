@@ -16,19 +16,27 @@ import (
 	"syscall"
 )
 
-func installCommand(args []string) error {
+func parseInstallOptions(args []string, platform string) (installation.Options, error) {
 	flags := flag.NewFlagSet("install", flag.ContinueOnError)
 	opts := installation.Options{}
 	flags.StringVar(&opts.Config, "config", "", "existing absolute configuration path (defaults are created automatically)")
 	flags.BoolVar(&opts.Upgrade, "upgrade", false, "gracefully update an existing installation, preserving its data and stopped state")
-	flags.BoolVar(&opts.Headless, "headless", false, "Linux: keep the service running without a login (may request administrator approval)")
+	flags.BoolVar(&opts.Headless, "headless", platform == "linux", "Linux: start at boot and keep running after logout (may request administrator approval)")
 	flags.BoolVar(&opts.NoStart, "no-start", false, "prepare the installation without starting it")
 	flags.StringVar(&opts.IfSource, "if-source", "", "update only an installation from this package path")
 	if err := flags.Parse(args); err != nil {
-		return err
+		return opts, err
 	}
 	if len(flags.Args()) != 0 {
-		return errors.New("unexpected installation arguments")
+		return opts, errors.New("unexpected installation arguments")
+	}
+	return opts, nil
+}
+
+func installCommand(args []string) error {
+	opts, err := parseInstallOptions(args, runtime.GOOS)
+	if err != nil {
+		return err
 	}
 	m, err := installation.New()
 	if err != nil {
@@ -211,6 +219,9 @@ func desktopCommand(args []string) error {
 			if m.Source == "/usr/lib/harbor/harbor" {
 				return exec.Command("pkexec", "/usr/bin/dpkg", "--remove", "harbor").Run()
 			}
+			if m.Source == "/usr/local/lib/harbor/harbor" {
+				return exec.Command("pkexec", "/bin/sh", "/usr/local/lib/harbor/system-install.sh", "--uninstall").Run()
+			}
 			return m.Uninstall(ctx, "")
 		}
 		if *action != "open" {
@@ -223,7 +234,7 @@ func desktopCommand(args []string) error {
 			closeProgress = func() { fmt.Fprintln(input, "100"); input.Close(); progress.Wait() }
 		}
 		defer func() { closeProgress() }()
-		if err = m.Install(ctx, installation.Options{Upgrade: true}); err != nil {
+		if err = m.Install(ctx, installation.Options{Upgrade: true, Headless: runtime.GOOS == "linux"}); err != nil {
 			return err
 		}
 		if err = m.Start(ctx); err != nil {
@@ -250,18 +261,26 @@ func desktopCommand(args []string) error {
 	return nil
 }
 
-// packageCommand runs as root during Debian package changes, but performs every
+// packageCommand runs as root during system installation changes, but performs every
 // user installation action as that user. It only touches records whose source
 // is this exact package, and never deletes data or changes user lingering.
 func packageCommand(args []string) error {
 	if runtime.GOOS != "linux" || os.Geteuid() != 0 || len(args) != 1 || (args[0] != "upgrade" && args[0] != "remove") {
-		return errors.New("package maintenance requires the Linux package manager")
+		return errors.New("package maintenance requires the Linux system installer")
 	}
 	contents, err := exec.Command("getent", "passwd").Output()
 	if err != nil {
 		return err
 	}
-	return maintainPackageUsers(contents, args[0])
+	source, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	source, err = filepath.EvalSymlinks(source)
+	if err != nil {
+		return err
+	}
+	return maintainPackageUsers(contents, args[0], source)
 }
 
 func packageRecord(home string) string {

@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+case "${1:-}" in install|upgrade)
+ prefix="${DPKG_ROOT:-}/usr/local"
+ for file in "$prefix/bin/harbor" "$prefix/share/applications/org.harbor.desktop"; do
+  if [ -e "$file" ] || [ -L "$file" ]; then
+   echo 'Standalone Harbor files under /usr/local would hide this Debian package. Remove the standalone installation before switching formats; ship data and configuration are preserved.' >&2
+   echo 'For an owned standalone install: sudo sh /usr/local/lib/harbor/system-install.sh --uninstall' >&2
+   exit 1
+  fi
+ done
+ ;; esac

@@ -38,16 +38,18 @@ See [installation](docs/installation.md) for updates and legacy-service migratio
 | Host | Installation |
 | --- | --- |
 | macOS 13+ | Open the universal `.dmg`, drag Harbor to Applications, and open it. The app installs the background runner and opens its interface. |
-| Debian/Ubuntu desktop | Install the matching `amd64` or `arm64` `.deb` through the software installer, then launch Harbor from the application menu. |
-| Headless Linux / 64-bit Raspberry Pi | As the ordinary service user, run `sh harbor-VERSION-linux-arm64.run`; substitute `amd64` on Intel/AMD. Use the actual downloaded filename. |
+| Debian/Ubuntu / 64-bit Raspberry Pi OS | Install the matching `amd64` or `arm64` `.deb`, then launch Harbor from the application menu or run `harbor install` as the ordinary service user over SSH. |
+| Other systemd Linux distributions | As the ordinary service user, run `sh harbor-VERSION-linux-arm64.run`; substitute `amd64` on Intel/AMD. Both formats supply the CLI and desktop launcher. Use the actual downloaded filename. |
 | Source development | Follow the build and isolated foreground setup below. |
 
 The current Mac distribution has no Developer ID signing or notarization and may require
 **System Settings → Privacy & Security → Open Anyway** on first launch; follow
 [the macOS approval instructions](docs/installation.md#allow-harbor-on-macos).
-Linux desktop packages need systemd, xdg-utils, Zenity, and pkexec. Headless
-installation needs a working systemd user session and may request administrator
-approval to enable user lingering for boot without login. Installed packages need
+Linux packages need a working systemd user session. The `.deb` depends on
+xdg-utils, Zenity, and pkexec; the `.run` needs those tools for desktop actions.
+Both formats enable user lingering for boot without login and may request
+administrator approval. The `.run` also requests approval for its system files.
+Installed packages need
 neither Node nor Go nor a database daemon. Initial ship boot can still require
 network access to the official Vere release and bootstrap pill hosts.
 

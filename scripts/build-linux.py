@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Debian desktop packages and offline one-command Linux installers."""
+"""Build complete Linux installations in Debian and standalone formats."""
 import gzip
 import hashlib
 import io
@@ -15,7 +15,16 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 def tar_bytes(entries, compression):
     raw = io.BytesIO()
     with tarfile.open(fileobj=raw, mode="w") as archive:
+        directories = set()
         for name, contents, mode, link in entries:
+            for parent in reversed(pathlib.PurePosixPath(name).parents):
+                if str(parent) == '.' or str(parent) in directories:
+                    continue
+                directory = tarfile.TarInfo('./' + str(parent))
+                directory.type = tarfile.DIRTYPE
+                directory.mode = 0o755
+                archive.addfile(directory)
+                directories.add(str(parent))
             info = tarfile.TarInfo(name)
             info.mode = mode
             if link is not None:
@@ -62,12 +71,13 @@ Depends: systemd, xdg-utils, zenity, pkexec
 Installed-Size: {(len(payload) + 1023) // 1024}
 Homepage: https://github.com/davetist/harbor
 Description: A self-hosted Urbit ship runner
- Open Harbor from the application menu. It creates your configuration and
+ Open Harbor from the application menu or run harbor install over SSH.
+ It creates your configuration and
  starts a per-user background runner. Ships keep running when the browser
  closes. Removal preserves ship data and configuration.
 """
     controls = [("./control", control.encode(), 0o644, None)]
-    for name in ("postinst", "prerm"):
+    for name in ("preinst", "postinst", "prerm"):
         controls.append(("./" + name, (ROOT / "packaging/linux" / name).read_bytes(), 0o755, None))
     data = [
         ("./usr/lib/harbor/harbor", payload, 0o755, None),
@@ -89,6 +99,9 @@ Description: A self-hosted Urbit ship runner
         ("./harbor", payload, 0o755, None),
         ("./install.sh", (ROOT / "packaging/linux/install.sh").read_bytes(), 0o755, None),
         ("./uninstall.sh", (ROOT / "packaging/linux/uninstall.sh").read_bytes(), 0o755, None),
+        ("./system-install.sh", (ROOT / "packaging/linux/system-install.sh").read_bytes(), 0o755, None),
+        ("./harbor.desktop", (ROOT / "packaging/linux/harbor.desktop").read_bytes(), 0o644, None),
+        ("./harbor.svg", (ROOT / "web/public/harbor-logo.svg").read_bytes(), 0o644, None),
         ("./LICENSE", (ROOT / "LICENSE").read_bytes(), 0o644, None),
         ("./THIRD_PARTY_NOTICES.txt", notices.read_bytes(), 0o644, None),
     ], "gz")
@@ -97,8 +110,9 @@ Description: A self-hosted Urbit ship runner
 # Harbor {version}, Linux {arch}. Offline installer; no compiler or network download needed.
 set -eu
 if [ "${{1:-}}" = --help ]; then
- echo 'usage: sh harbor-*.run [--upgrade] [--config /absolute/config.json] [--desktop]'
- echo 'Sets up Harbor and boot without login; administrator approval may be requested.'
+ echo 'usage: sh harbor-*.run [--upgrade] [--config /absolute/config.json]'
+ echo 'Installs the harbor command, desktop launcher and background service on desktop or headless Linux.'
+ echo 'System installation and startup at boot request administrator approval.'
  exit 0
 fi
 [ "$(id -u)" -ne 0 ] || {{ echo 'Run this installer as your ordinary user, rather than root.' >&2; exit 1; }}

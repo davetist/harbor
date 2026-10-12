@@ -14,11 +14,13 @@ A native Go service runs your ships. The Mac app and Linux application launcher 
 
 ## Start Harbor
 
-Installation candidates provide familiar desktop installs and a separate headless path:
+Installation candidates provide the same Linux application for desktop and SSH use:
 
 - **Mac (macOS 13+):** open the universal `.dmg`, drag Harbor into Applications, then open it. If macOS blocks the unsigned download, [allow Harbor](docs/installation.md#allow-harbor-on-macos). Harbor creates its configuration and background runner. Use the Harbor menu to stop or uninstall it.
-- **Debian/Ubuntu/Linux desktop:** open the matching `.deb` in your software installer, then launch **Harbor** from the application menu. The launcher sets up your per-user runner and opens your browser. Its menu actions stop or uninstall Harbor.
-- **Headless Linux / Raspberry Pi:** download the matching `.run` and run `sh harbor-VERSION-linux-arm64.run` (use `amd64` on Intel/AMD). It installs offline, configures the service, handles startup without login, and prints the browser addresses. Administrator approval may be requested for startup at boot.
+- **Debian/Ubuntu/Raspberry Pi OS:** install the matching `.deb`, then launch **Harbor** from the application menu or run `harbor install` over SSH.
+- **Other Linux distributions:** download the matching `.run` and run `sh harbor-VERSION-linux-arm64.run` (use `amd64` on Intel/AMD). The offline installer supplies the command, application-menu launcher, and user service. System files and startup at boot request administrator approval.
+
+Both Linux formats provide `harbor desktop` to open the interface and `harbor service status`, `start`, `stop`, and `uninstall` to manage the background runner. Setup starts Harbor at boot and keeps it running after logout. Closing the browser leaves ships running. Choose a format for your package manager; neither format is a separate headless or desktop edition.
 
 Mac downloads use manual first-launch approval without Developer ID signing or notarization. If macOS blocks Harbor, open **System Settings → Privacy & Security**, choose **Open Anyway** for Harbor, and confirm **Open**. Alternatively, after dragging Harbor into Applications, run:
 

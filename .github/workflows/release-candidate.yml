@@ -28,7 +28,7 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - name: Build source, binary archives and Linux desktop/headless installers
+      - name: Build source, binary archives and Linux DEB/RUN installers
         run: HARBOR_GO=go scripts/build-release.sh "$RELEASE_VERSION"
       # Runtime helper packages share preferred HTTP ports during launch.
       - run: go test -race -p 1 ./... && go vet ./...
@@ -87,7 +87,7 @@ jobs:
           cat > release-notes.md <<EOF
           Automated experimental Harbor build from commit $GITHUB_SHA.
 
-          Installers: universal macOS DMG, Linux amd64/arm64 desktop DEB packages and offline headless RUN installers.
+          Installers: universal macOS DMG, Linux amd64/arm64 DEB packages and offline RUN installers. Both Linux formats include the CLI, desktop launcher and background service.
           SHA256SUMS covers these five installers.
 
           macOS downloads require manual first-launch approval; Developer ID signing and notarization are not provided.

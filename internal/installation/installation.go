@@ -414,6 +414,14 @@ func (m *Manager) Install(ctx context.Context, opts Options) error {
 	if changed {
 		return m.upgrade(ctx, r, payload)
 	}
+	// Switching Linux formats at the same version transfers the package source
+	// without restarting the copied runner or enabling a deliberately stopped one.
+	if exists && m.Platform == "linux" && opts.Upgrade && m.Source != m.Paths.Binary && r.Source != m.Source {
+		r.Source = m.Source
+		if err = m.save(r); err != nil {
+			return err
+		}
+	}
 	if r.Enabled && !opts.NoStart {
 		return m.start(ctx, r)
 	}

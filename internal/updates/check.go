@@ -104,12 +104,13 @@ type release struct {
 
 func (r release) installable(platform string) bool {
 	version := strings.TrimPrefix(r.Tag, "v")
-	var installer string
+	var installers []string
 	switch platform {
 	case "darwin/arm64", "darwin/amd64":
-		installer = "Harbor-" + version + "-macos-universal.dmg"
+		installers = []string{"Harbor-" + version + "-macos-universal.dmg"}
 	case "linux/arm64", "linux/amd64":
-		installer = "harbor-" + version + "-linux-" + strings.TrimPrefix(platform, "linux/") + ".run"
+		base := "harbor-" + version + "-linux-" + strings.TrimPrefix(platform, "linux/")
+		installers = []string{base + ".deb", base + ".run"}
 	default:
 		return false
 	}
@@ -118,7 +119,9 @@ func (r release) installable(platform string) bool {
 		if asset.State != "uploaded" || asset.Size <= 0 {
 			continue
 		}
-		ready = ready || asset.Name == installer
+		for _, installer := range installers {
+			ready = ready || asset.Name == installer
+		}
 		checksums = checksums || asset.Name == "SHA256SUMS"
 	}
 	return ready && checksums
