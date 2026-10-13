@@ -25,7 +25,7 @@ Two epochs does **not** mean two weeks of history. Manual rolls and runtime migr
 - Linux ARM64: Raspberry Pi 4 Model B Rev 1.4 with the 8 GB memory configuration (at least 7 GiB reported RAM).
 - Both: official Vere 4.6, loom exponent 31; the native fixture began with a 766.6 MiB snapshot.
 
-Other CPUs, Pi revisions, memory configurations, runtime versions and loom sizes have no measured default profile yet. New schedules on those configurations start paused and say why. macOS/Linux x86_64 remain supported build targets, with native acceptance and enabled default profiles still outstanding. Explicit manual Pack/Roll/Chop remain subject to resource checks; Meld additionally requires a measured hardware/runtime/loom profile.
+Other CPUs, Pi revisions, memory configurations, runtime versions and loom sizes have no measured default profile yet. New schedules on those configurations start paused and say why. macOS/Linux x86_64 passed fresh-comet Pack/Roll/Chop lifecycle acceptance in the [first alpha release pass](validation.md#first-named-alpha-release-pass--2026-10-13); measured automatic-maintenance profiles and native Meld acceptance there remain outstanding. Explicit manual Pack/Roll/Chop remain subject to resource checks; Meld additionally requires a measured hardware/runtime/loom profile.
 
 ## Checks before running
 

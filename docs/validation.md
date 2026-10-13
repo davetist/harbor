@@ -1,13 +1,72 @@
 # Validation
 
-Evidence reviewed on 2026-10-11. Native trials use isolated disposable fake ships or fresh comets, never an operator's existing pier or identity key. Cross-built artifacts and simulated browser tests are recorded separately from native acceptance.
+Evidence reviewed on 2026-10-13 for the first named public alpha. Native trials use isolated disposable fake ships or fresh comets, never an operator's existing pier or identity key. Cross-built artifacts and simulated browser tests are recorded separately from native acceptance. Older dated sections describe their own candidates, not a repeat of those checks on the public alpha.
 
 | Target | Evidence | Remaining |
 | --- | --- | --- |
 | macOS ARM64 | M2 Max/32 GiB: native Vere boot/login/Dojo, full export/restore, 4.5→4.6 update, full replay, three maintenance passes, LaunchAgent graceful utility shutdown, confirmed/uncertain Pack recovery windows. Fresh-comet browser Dojo/Open and desktop/mobile accessibility. Combined alpha.3 candidate: early-bootstrap shutdown/resume and supplemental stopped-comet import, all four maintenance commands, export/restore/checkpoint replay and authenticated restarts. | Valid disposable-key onboarding, real-identity migration, representative active ships, broader first-boot failure windows. |
-| Linux ARM64 | Raspberry Pi 4/8 GB: native service/UI, Mac export restore/login, 4.5→4.6 update/replay, maintenance and due schedule, systemd graceful utility shutdown, Pack interruption holds and fresh restored-folder login. Shared map policy: isolated folder import, repeated/automatic/post-Pack restart and oversized-import refusal. Combined alpha.3 candidate: supplemental stopped-comet import, all four maintenance commands, export/restore/checkpoint replay and authenticated restarts; actual mappings checked. | Physical drive, valid disposable keys, real identities, larger active ships and broader failure/recovery windows. A separate untraced Pack crash remains held with unresolved cause. |
-| macOS x86_64 | Binary cross-compilation and hosted native Go checks. | Native ship execution and lifecycle acceptance. |
-| Linux x86_64 | Binary cross-compilation and hosted native Go checks. | Native ship execution and lifecycle acceptance. |
+| Linux ARM64 | Raspberry Pi 4/8 GB: native service/UI, Mac export restore/login, 4.5→4.6 update/replay, maintenance and due schedule, systemd graceful utility shutdown, Pack interruption holds and fresh restored-folder login. Shared map policy: isolated folder import, repeated/automatic/post-Pack restart and oversized-import refusal. Combined alpha.3 candidate: supplemental stopped-comet import, all four maintenance commands, export/restore/checkpoint replay and authenticated restarts; actual mappings checked. | Physical-drive disconnect/power-loss, valid disposable keys, real identities, larger active ships and broader failure/recovery windows. A separate untraced Pack crash remains held with unresolved cause. |
+| macOS x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
+| Linux x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
+
+## First named alpha release pass — 2026-10-13
+
+The [four-platform native lifecycle run](https://github.com/davetist/harbor/actions/runs/38387194232)
+passed on `darwin/arm64`, `darwin/amd64`, `linux/arm64` and `linux/amd64`.
+Each credential-free report was downloaded and checked: fresh comet onboarding,
+new-cookie authenticated login, stop/start, Pack/Roll/Chop, stopped-source
+export, upload/restore, the restored registration's own checkpoint, replay and
+final graceful manager exit all passed. This run used source revision
+`796b39dbff5ea13ce54410dda758f703dfa82062`; the alpha release preparation changes
+documentation only. These were real native comets, not cross-builds or retained
+onboarding fixtures. The workflow does not cover Meld, runtime transitions,
+valid identity keys, OS installation or physical fault injection.
+
+The locally compiled `0.1.0-alpha.1` Apple Silicon runner independently passed
+the same full fresh-comet lifecycle with service exit 0. Its binary SHA-256 was
+`824784fe8e41c6922bec6d564d0daeed67de8026b0cdc01b860f3a2633022874`.
+A unique temporary Mac LaunchAgent passed installation, idempotent opening,
+replacement with the alpha runner, stop/start, preservation of stopped intent
+through CLI replacement, and removal with configuration/data retained. The
+ordinary installed Harbor service was not replaced by these trials.
+
+The actual CGO-disabled packaged Mac ARM64 alpha runner separately passed fresh
+comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful
+exit. Its SHA-256 was
+`b9ab23dc9ddf601e66d5efbc5c1d64087d3f14807ae91c897946bcc64f9c9b16`.
+All ten local release-builder outputs passed their checksum manifest; archive
+inspection confirmed notices, executable modes, the agent guide in the source
+archive and exclusion of private/generated state. The universal Mac disk image
+passed read-only inspection of both architectures, ad-hoc signatures, release
+version, macOS 13 minimum, Applications shortcut, instructions and notices.
+This is local package validation, separate from clean-Mac download/approval.
+
+An independently extracted allowlisted source archive installed from its
+lockfile, rebuilt the embedded UI and runner, and passed fresh Go race/vet,
+frontend type/unit and native-login contract checks. Its empty-registry runner
+served HTTP 200, an empty ship list and production assets byte-identical to the
+inspected native browser build, then exited 0. Subsequent release edits changed
+documentation only; the final source archive was checked against that tested
+implementation and current documentation.
+
+Release checks passed: a fresh `go test -race -count=1 -p 1 ./...`, `go vet ./...`,
+frontend type checking and three unit tests, nine native-login contract tests,
+seven installation-package tests, module download and third-party notices.
+`npm audit` found zero advisories; `govulncheck` v1.8.0 found no vulnerabilities.
+The production frontend was rebuilt before Go verification.
+
+All 66 browser tests were exercised on macOS ARM64: 61 routine fixtures passed,
+then the five normally guarded native tests passed on newly prepared disposable
+services. Native checks covered real host folder browsing, update discovery
+against GitHub and current-version refresh, production navigation, Dojo output,
+Open ship, Roll/Chop schedule editing, accessibility and desktop/mobile layout.
+The ship was a newly bootstrapped offline fake `~zod`; update-version fixtures
+advertised the alpha and current public `main.13` versions to cover both states.
+All fixture ships stopped and managers/bootstrap processes exited 0. These
+browser checks do not establish clean-machine installation or human
+screen-reader/physical-touch acceptance.
+
+### Earlier manual observations
 
 The Pi's virgin 4.5 fixture bootstrap needed a retry with a smaller upstream LMDB mapping after an out-of-memory failure. Later ordinary Harbor starts/update/replay passed. That fixture setup is not default onboarding acceptance. Successful paths do not establish every power-loss, forced-kill or filesystem-failure outcome.
 
@@ -24,7 +83,7 @@ Routine commands:
 ```sh
 npm --prefix web ci
 HARBOR_GO=go scripts/build.sh
-go test -race ./...
+go test -race -p 1 ./...
 go vet ./...
 python3 scripts/test_native_acceptance.py
 npm --prefix web run typecheck

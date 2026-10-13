@@ -10,7 +10,7 @@ A native Go service runs your ships. The Mac app and Linux application launcher 
 
 *Visual preview with simulated ships; native validation is documented separately.*
 
-**Experimental alpha.** Apple Silicon and Raspberry Pi 4 candidates passed stopped-comet import, all four maintenance commands, export/restore, replay and authenticated restarts. The Mac candidate also passed shutdown during first boot and resumed the preserved pier. Native Intel ship execution, valid identity-key onboarding/migration, physical external-drive failures and broader recovery acceptance remain open. The LMDB workaround mitigates an upstream address collision; an earlier untraced Pi Pack crash remains preserved with its recovery hold. Use disposable ships while these acceptance gates are unfinished. See [validation](docs/validation.md) and [release readiness](docs/release-readiness.md).
+**First public alpha: [v0.1.0-alpha.1](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.1).** Read the [release notes](docs/releases/0.1.0-alpha.1.md) for downloads, validation and remaining limits. Fresh comet boot/login, stop/start, Pack/Roll/Chop, export/restore and replay passed on all four native targets. Earlier Apple Silicon and Raspberry Pi 4 trials also covered Meld; the Mac passed first-boot shutdown/resume. Valid identity-key onboarding/migration, physical external-drive failures and broader recovery acceptance remain open. The LMDB workaround mitigates an upstream address collision; an earlier untraced Pi Pack crash remains preserved with its recovery hold. Use disposable ships while these acceptance gates are unfinished. See [validation](docs/validation.md) and [release readiness](docs/release-readiness.md).
 
 ## Start Harbor
 
@@ -31,6 +31,8 @@ xattr -dr com.apple.quarantine "/Applications/Harbor.app"
 Then open Harbor again. The command removes the download quarantine attribute only from Harbor and its bundled files. A newer download may require approval again; see [macOS installation](docs/installation.md#allow-harbor-on-macos).
 
 Ship data and configuration survive updates and removal. See [installation](docs/installation.md) for updating, advanced configuration and existing-service safeguards. Every push to `main` runs [Build and publish install packages](https://github.com/davetist/harbor/actions/workflows/release-candidate.yml). Each versioned prerelease on [GitHub Releases](https://github.com/davetist/harbor/releases) contains five installers: one universal Mac `.dmg`, Linux `.deb` and `.run` installers for amd64 and arm64, plus `SHA256SUMS` for those five files. Release downloads do not expire; they remain available until explicitly deleted. Each release identifies the commit it was built from. GitHub also supplies its own source ZIP/tar links automatically.
+
+Choose the named alpha above for the first alpha release; `main.*` prereleases are automated development builds. Verify your selected download against its release's `SHA256SUMS` before opening it. Agents installing Harbor should start with the [agent installation runbook](AGENTS.md#agent-installation-runbook).
 
 ### From source
 

@@ -6,6 +6,12 @@ Use this guide to install a development copy, find the relevant code, and debug
 without putting an operator's ships at risk. Read current source when behavior
 differs from documentation; do not treat past validation as fresh evidence.
 
+The first named public alpha is [v0.1.0-alpha.1](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.1).
+Read its [release notes](docs/releases/0.1.0-alpha.1.md) and the current
+[validation limits](docs/validation.md) before choosing a real-ship workflow.
+Earlier `alpha.*` names in validation records are local candidates; GitHub's
+`main.*` prereleases are automated development builds.
+
 ## Working here
 
 - Be direct, friendly, and practical. Carry requested changes through verification.
@@ -27,6 +33,58 @@ differs from documentation; do not treat past validation as fresh evidence.
 
 ## Install Harbor
 
+### Agent installation runbook
+
+1. Confirm the requested host, OS/CPU (`uname -sm`), service user, installation
+   versus upgrade, and whether a Harbor service or another pier writer already
+   exists. Linux must be 64-bit with systemd; a 32-bit Pi OS needs an OS upgrade,
+   not the ARM64 installer. Windows and non-systemd Linux are unsupported.
+2. Prefer the named alpha linked above for this release. Inspect its actual assets;
+   do not use GitHub's `/releases/latest` API for a prerelease, guess an asset URL,
+   or select an automated `main.*` build merely because it sorts newer.
+   `gh release view v0.1.0-alpha.1 --repo davetist/harbor` is an optional way to
+   inspect it; `gh` is not an installation prerequisite. Download the matching
+   installer and that release's `SHA256SUMS` into a new private folder.
+3. Verify the exact selected file before opening or running it. If downloading
+   only one installer, select its checksum line rather than asking the checker
+   to verify the other four absent files:
+
+   ```sh
+   # Set this to the exact downloaded filename for this host.
+   harbor_installer=Harbor-0.1.0-alpha.1-macos-universal.dmg
+   awk -v artifact="$harbor_installer" '$2 == artifact {print; found=1} END {if (!found) exit 1}' SHA256SUMS > selected-SHA256SUMS
+   shasum -a 256 -c selected-SHA256SUMS  # macOS
+   # Linux: sha256sum -c selected-SHA256SUMS
+   ```
+
+   Require a successful checksum result; a missing entry is a failure.
+4. Install using the platform path below. Run the app and `harbor install` as
+   the intended ordinary user. Use administrator authority only for the
+   documented package/system-file or lingering steps. Do not run Harbor or Vere
+   as root, install a second manager, or replace a foreign service manually.
+5. Verify the installed runner with `harbor service status --json`. On Mac, use
+   `/Applications/Harbor.app/Contents/Resources/harbor` when there is no CLI on
+   PATH. Read the reported configuration, runner, running/enabled state and URL;
+   use that runner's `version` command and inspect private fields locally.
+   Request the reported URL's `/api/v1/host` and `/api/v1/ships`, then open its
+   onboarding or ship list. An empty registry is expected only on a fresh installation.
+6. For ship acceptance, use **Try a comet** in an explicitly disposable folder,
+   wait for the durable onboarding job to complete, then check running state,
+   **Open ship**, a fresh authenticated login, stop and restart. Harbor HTTP 200
+   alone does not prove a ship runs. Use the guarded native trial below for
+   repeatable lifecycle validation. Real keys/piers require their own authorization.
+
+Replacement through the CLI/package path preserves configuration and service
+startup intent. Use `sudo apt install ./ACTUAL.deb`, the newer `.run --upgrade`,
+or the newer runner's `install --upgrade`, as appropriate to the original
+installation. Opening the Mac app or Linux desktop launcher explicitly starts
+Harbor, including a deliberately stopped manager. To upgrade a stopped Mac
+installation while keeping it stopped, copy the new app into Applications and
+run its bundled runner's `install --upgrade` without opening the app. Inspect
+status before deciding to start it. Switching `.deb`/`.run`
+formats requires the documented data-preserving removal first, with authorization
+for that service interruption. See [updates and removal](docs/installation.md#updates-and-removal).
+
 ### Choose the appropriate installation
 
 Check the host OS/CPU and any existing installation first. Obtain the matching
@@ -38,7 +96,7 @@ See [installation](docs/installation.md) for updates and legacy-service migratio
 | Host | Installation |
 | --- | --- |
 | macOS 13+ | Open the universal `.dmg`, drag Harbor to Applications, and open it. The app installs the background runner and opens its interface. |
-| Debian/Ubuntu / 64-bit Raspberry Pi OS | Install the matching `amd64` or `arm64` `.deb`, then launch Harbor from the application menu or run `harbor install` as the ordinary service user over SSH. |
+| Debian/Ubuntu / 64-bit Raspberry Pi OS | As the ordinary user, run `sudo apt install ./ACTUAL.deb` with the verified matching `amd64` or `arm64` file, then launch Harbor from the application menu or run `harbor install` over SSH. `apt` resolves package dependencies. |
 | Other systemd Linux distributions | As the ordinary service user, run `sh harbor-VERSION-linux-arm64.run`; substitute `amd64` on Intel/AMD. Both formats supply the CLI and desktop launcher. Use the actual downloaded filename. |
 | Source development | Follow the build and isolated foreground setup below. |
 
@@ -49,9 +107,12 @@ Linux packages need a working systemd user session. The `.deb` depends on
 xdg-utils, Zenity, and pkexec; the `.run` needs those tools for desktop actions.
 Both formats enable user lingering for boot without login and may request
 administrator approval. The `.run` also requests approval for its system files.
-Installed packages need
-neither Node nor Go nor a database daemon. Initial ship boot can still require
+The `.run` requires `sudo`, `runuser`, `flock`, `sha256sum`, and a working user
+systemd session; install its desktop tools separately if they are absent.
+Installed packages need neither Node nor Go nor a database daemon. Initial ship boot requires
 network access to the official Vere release and bootstrap pill hosts.
+Initial bootstrap can take several minutes; check durable job state before
+declaring a stall. A canceled request does not establish that its writer exited.
 
 Closing the Mac window or browser leaves the background runner and ships running.
 `harbor service status --json` inspects an installed service; `start`, `stop`, and
@@ -156,11 +217,17 @@ The folder browser reads the runner host's directories with its OS user's access
 
 The default control listener is IPv4 `0.0.0.0:18789`. Ship starts try HTTP port 80,
 then 8080 upward; stopped ships do not reserve ports, so a restart can change one.
-`advertisedHost` changes Open links, not bindings. Existing ships retain their saved
+`advertisedHost` admits the configured hostname and changes Open links, not bindings. Existing ships retain their saved
 HTTP binding when defaults change. Harbor has no separate login: every reachable
 control client can manage all ships. Host/origin checks are not authentication and
 do not protect ship HTTP listeners. Keep access on trusted LANs/tailnets with
 external firewall policy; do not add public forwarding or bypass those checks.
+If accessing Harbor through a DNS, mDNS or Tailscale hostname, set
+`advertisedHost` to that exact hostname (without scheme, port or path) in the
+existing configuration and perform an authorized graceful service restart.
+Otherwise use the actual destination IPv4 address; an unconfigured hostname can
+be refused by Host validation. Granting privileged-port capability is a separate
+operator action; ordinary installs fall back from port 80 without changing permissions.
 
 ## Lifecycle rules to preserve
 

@@ -33,6 +33,11 @@ Keep retained comet fixtures current and run one copy of an identity at a time. 
 
 The manually dispatched **Native disposable comet acceptance** workflow runs the same script on four native runners and uploads only `status.json` for seven days. It has no publishing permissions. Prepared workflow configuration is not hosted/native acceptance evidence until an actual run passes.
 
+The [first alpha lifecycle run](https://github.com/davetist/harbor/actions/runs/38387194232)
+passed on all four native targets on 13 October 2026. Its downloaded reports
+confirmed every lifecycle check and graceful service exit; see
+[validation](validation.md#first-named-alpha-release-pass--2026-10-13) for revision and scope.
+
 ## Physical storage trial
 
 The intended physical drive must be attached, mounted and UUID-pinned using [external storage](external-storage.md). Do not use an operator's live pier. Place a new disposable trial in a chosen folder on that drive and record its filesystem, capacity, connection/enclosure and actual allocated bytes.

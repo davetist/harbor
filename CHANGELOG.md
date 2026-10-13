@@ -2,13 +2,28 @@
 
 ## Unreleased
 
-Initial experimental Harbor implementation and publication preparation. No public release has been published.
+No changes recorded after the first named alpha.
+
+## [0.1.0-alpha.1](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.1) — 2026-10-13
+
+First named public alpha, following the automated `main.*` development builds.
+See the [release notes](docs/releases/0.1.0-alpha.1.md) for installation and the
+current validation boundary. Earlier `alpha.*` labels below identify unpublished
+local candidates, not earlier named public releases.
+
+- Launch-time ship HTTP port selection: port 80, then 8080 upward; stopped ships do not reserve ports.
+- Recovery verification uses the recorded maintenance utility and retains interrupted/failed restart holds.
+- Normal and automatic maintenance restarts settle durable jobs with bounded readiness checks.
+- CSP-compatible production sigils and terminal styles, guarded stopped-ship removal, and user-selected pier folders.
+- One-click Vere updates preserve running/stopped intent; the Harbor footer checks installer releases without installing them.
+- Updated agent installation, checksum, configuration, service and troubleshooting instructions.
+- Fresh comet boot/login, stop/start, Pack/Roll/Chop and export/restore/replay acceptance passed on all four native targets; native Intel installer, Meld and large-map acceptance remain separate.
 
 - Universal Mac app/disk image with automatic user-service setup, native file pickers/downloads, persistent background operation and explicit stop/uninstall controls.
 - Linux `.deb` and offline `.run` formats with the same CLI, application-menu launch/stop/removal, and startup without login on ARM64/amd64. Debian archives include parent directories so fresh package installation succeeds.
 - Managed installation records, data-preserving upgrades/removal, previous-runner rollback, logged-out-user package handling and service-PID readiness checks.
 - macOS distribution without Developer ID signing or notarization, with manual first-launch approval and a Harbor-only quarantine command included in the disk image and installation guide.
-- Native installation lifecycle acceptance on Apple Silicon and Raspberry Pi, plus a real Safari download, blocked macOS launch, documented quarantine command and successful native launch/upgrade. Clean-Mac first installation, public-release delivery and privileged desktop-package/boot trials remain separate gates.
+- Native installation lifecycle acceptance on Apple Silicon and Raspberry Pi, plus a real Safari download, blocked macOS launch, documented quarantine command and successful native launch/upgrade. Pi ARM64 privileged installer/format-switch and boot-without-login trials passed; clean-Mac first installation, native Intel installer execution and broader graphical package trials remain separate gates.
 
 - Native Go service with an embedded React browser interface for macOS/Linux, x86_64/ARM64.
 - Key/comet onboarding, stopped-folder registration and integrity-checked full-pier archives.
@@ -29,7 +44,7 @@ Initial experimental Harbor implementation and publication preparation. No publi
 - Improved keyboard focus, accessible tabs/upload selection, contrast, touch targets and narrow layouts; added fixture and opt-in native accessibility regressions.
 - Added disposable native onboarding/lifecycle tooling, a manual four-platform acceptance workflow and a universal Developer ID signing/notarization installer path (superseded by the current unsigned app distribution). Hardware/key acceptance remains explicit in release readiness.
 
-- Added adaptive LMDB mappings on every macOS/Linux ship launch on x86_64 and ARM64, including first boot, imports, manual/automatic starts and post-utility restarts. Mapping size is at least twice the largest database's logical file size, rounded up to a power of two with a 64 GiB minimum and recalculated on each start. There is no 32 GiB database cutoff or live resizing. Native Mac ARM64 and Pi ARM64 trials verified 64/128/256 GiB mappings and authenticated login, automatic startup, post-Pack restart and unsafe-storage refusal on isolated fixtures. Larger fixtures used valid databases with sparse trailing space; populated large-ship acceptance and native Intel execution remain open.
+- Added adaptive LMDB mappings on every macOS/Linux ship launch on x86_64 and ARM64, including first boot, imports, manual/automatic starts and post-utility restarts. Mapping size is at least twice the largest database's logical file size, rounded up to a power of two with a 64 GiB minimum and recalculated on each start. There is no 32 GiB database cutoff or live resizing. Native Mac ARM64 and Pi ARM64 trials verified 64/128/256 GiB mappings and authenticated login, automatic startup, post-Pack restart and unsafe-storage refusal on isolated fixtures. Larger fixtures used valid databases with sparse trailing space; populated large-ship and native Intel large-map acceptance remain open.
 - Extended adaptive mapping to Pack/Meld/Roll/Chop utility processes, remeasuring under the pier guard before spawn. Child-process regressions cover all four utilities, database growth, unsafe-storage refusal and unchanged replay/update-preparation arguments. Vere 4.6's `play` and `prep` parsers do not support the map option.
 - Require a private worker identity reply before reporting startup ready. During first boot, graceful stop waits until Vere can handle the signal; Harbor keeps the controller, PTY, database and process ownership until native exit instead of closing them at a fixed shutdown deadline.
 - Corrected native login acceptance for transient landing-page absence: require a fresh session cookie and an exact same-origin JavaScript session response assigning the expected ship identity. Login redirects, HTML and authentication refusal remain failures; only initial session-script 404 responses receive bounded retries. Nine HTTP contract regressions are included in source packages and routine CI.

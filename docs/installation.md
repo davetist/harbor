@@ -1,6 +1,6 @@
 # Installation and configuration
 
-Harbor builds for macOS and Linux on x86_64 (`amd64`) and ARM64 (`arm64`). Native acceptance currently covers Apple Silicon and Raspberry Pi 4; Intel artifacts are cross-built. Windows is unsupported.
+Harbor builds for macOS and 64-bit systemd Linux on x86_64 (`amd64`) and ARM64 (`arm64`). Fresh disposable-comet lifecycle acceptance passed on all four targets for the first named alpha; native installer evidence is broader on Apple Silicon and Raspberry Pi 4 than on Intel. See [current validation](validation.md#first-named-alpha-release-pass--2026-10-13) for the exact boundary. Windows, 32-bit Linux and non-systemd Linux are unsupported.
 
 ## Desktop installation
 
@@ -8,7 +8,7 @@ On **macOS 13 or later**, open the universal Harbor disk image, drag **Harbor** 
 
 Closing the window or choosing **Quit Harbor Interface** leaves the runner and ships running. The Harbor menu shows runner state and provides **Stop Harbor**, **Show Ship Data**, **Show Service Logs** and **Uninstall Harbor**. Stop waits for ongoing operations and graceful ship shutdown. Open Harbor to start it again. Uninstall removes the service and copied runner, then moves the app to the Trash; configuration, piers and exports remain.
 
-In the Mac app, **Browse** opens the normal macOS folder browser. In a web browser, including the Linux desktop launcher's browser, it opens Harbor's directory browser for the machine running Harbor. Open folders, go up to parents, use breadcrumbs or Home, or enter an absolute path and press Go. Hidden folders can be shown. **Use this folder** confirms the current directory; Cancel or Escape keeps the existing form value. Listings come from the host filesystem using the service user's OS permissions, including outside the configured pier roots. Import and boot still validate the selected path against `allowedRoots`; browsing does not change the configuration. Add another storage location to `allowedRoots` and restart the runner before using it.
+In the Mac app, **Browse** opens the normal macOS folder browser. In a web browser, including the Linux desktop launcher's browser, it opens Harbor's directory browser for the machine running Harbor. Open folders, go up to parents, use breadcrumbs or Home, or enter an absolute path and press Go. Hidden folders can be shown. **Use this folder** confirms the current directory; Cancel or Escape keeps the existing form value. Listings come from the host filesystem using the service user's OS permissions. Import and boot accept any accessible, writable destination while preserving canonical-path, symlink, overwrite, storage-pin and exclusive-writer checks. `allowedRoots` supplies legacy defaults and startup volume-pin paths; it is not a folder whitelist. Selecting another folder does not require changing that list or restarting Harbor. See [external storage](external-storage.md) when the destination needs a pinned mount.
 
 On Linux, both `.deb` and `.run` install the same command, application-menu launcher, and background runner. Choose `.deb` for Debian, Ubuntu, or Raspberry Pi OS and `.run` for other systemd distributions. Both work over SSH and on a desktop; no desktop/headless edition must be selected.
 
@@ -44,7 +44,7 @@ Use one Linux format at a time. Before switching, remove the previous system ins
 
 ## Foreground operation
 
-Extract the binary archive for the host's OS/CPU, check it against `SHA256SUMS`, and run `./harbor version`. Then start `./harbor serve`. Source builds are described in the README. Keep the service process running; closing its browser is safe, ending the foreground process stops Harbor and its owned ships gracefully.
+Binary archives are advanced-use outputs of the local `scripts/build-release.sh VERSION` builder; the public GitHub release publishes the installers above and their checksums. If using a locally built binary archive, extract the host's OS/CPU version, check it against that build's `SHA256SUMS`, and run `./harbor version`. Then start `./harbor serve`. Source builds are described in the README. Keep the service process running; closing its browser is safe, ending the foreground process stops Harbor and its owned ships gracefully.
 
 Without a configuration file, data lives in `Harbor` under the OS user configuration directory: `~/Library/Application Support/Harbor` on macOS, and `$XDG_CONFIG_HOME/Harbor` or `~/.config/Harbor` on Linux. The default pier destination is `dataDir/piers`; you can choose any other accessible folder.
 
@@ -77,6 +77,11 @@ JSON does not expand `~` or environment variables. Unknown fields and relative s
 ## Network access
 
 On the service host, open `http://127.0.0.1:18789`. Other devices use `http://LAN-IP:18789` or the host's Tailscale IPv4 address. Tailscale must already be installed and its policy must allow access; Harbor performs no VPN setup. The default IPv4 wildcard follows newly connected LAN/Tailscale interfaces without a Harbor restart.
+
+For a DNS, mDNS or Tailscale hostname, set `advertisedHost` to that exact host
+without scheme, port or path, then gracefully restart the service. An
+unconfigured hostname can be refused even when it resolves to the right machine;
+use the destination IPv4 address while diagnosing it.
 
 Each ship chooses its HTTP port when it starts: Harbor tries port 80 first, then 8080, 8081 and upward, skipping occupied ports and ports reserved by ships currently starting or running. If the OS refuses port 80 without extra privileges, Harbor falls back without requesting them. Stopped ships do not reserve ports, and a ship's port may change after a restart. **Open ship** uses the currently selected port.
 
@@ -118,7 +123,7 @@ The bottom-right footer shows the running Harbor version as a button. Clicking i
 
 Update checks run through the Harbor service and require access to GitHub's public API. They use no credentials or ship information. The version link leads to the existing installation procedure below; it does not replace the running binary automatically.
 
-On Mac, replace the app in Applications with the newer download and open it; repeat the [macOS approval](#allow-harbor-on-macos) if requested. Harbor gracefully stops its installed runner if its bundled version changed, replaces the copied executable, and restarts it with the same configuration. On Debian/Ubuntu, a package upgrade updates only per-user installations originating from that package. Deliberately stopped services remain stopped; logged-out users retain their next-login startup preference. A failed candidate startup attempts restoration of the previous runner. Interrupted/uncertain replacements preserve the previous executable and fail closed for inspection.
+On Mac, replace the app in Applications with the newer download and open it; repeat the [macOS approval](#allow-harbor-on-macos) if requested. Harbor gracefully stops its installed runner if its bundled version changed, replaces the copied executable, and starts it with the same configuration. Opening the Mac app or Linux desktop launcher intentionally starts the manager. To keep a deliberately stopped Mac manager stopped after replacement, run `/Applications/Harbor.app/Contents/Resources/harbor install --upgrade` without opening the app. CLI replacement preserves startup intent. On Debian/Ubuntu, a package upgrade updates only per-user installations originating from that package. Deliberately stopped services remain stopped; logged-out users retain their next-login startup preference. A failed candidate startup attempts restoration of the previous runner. Interrupted/uncertain replacements preserve the previous executable and fail closed for inspection.
 
 For a standalone Linux installation, run the newer `.run` with `--upgrade`, or `sh ./install.sh --upgrade` from a newer Linux binary archive. System installation updates only user services originating from that exact system runner. For a direct binary's user service, run the newer binary's `harbor install --upgrade`. There is no network self-updater; runtime updates inside Harbor update Vere, rather than the Harbor application.
 
@@ -139,6 +144,6 @@ An unreachable page usually means the process is stopped, the bind address is un
 
 ## Assigned ports and storage locations
 
-A `listenAddress` port of `0` uses the assigned listener port for Host/origin validation; read the actual URL from the service startup line. The host API reports manager state in `dataDir`, the default pier destination in `pierRoot`, and all permitted destinations in `allowedRoots`. Onboarding uses `pierRoot`. These locations can be on different filesystems.
+A `listenAddress` port of `0` uses the assigned listener port for Host/origin validation; read the actual URL from the service startup line. The host API reports manager state in `dataDir`, the default pier destination in `pierRoot`, and legacy default/volume-pin paths in `allowedRoots`. Onboarding suggests `pierRoot` and accepts other accessible destinations. These locations can be on different filesystems.
 
 See [retention](retention.md) for explicit cleanup/accounting and [macOS distribution](macos-distribution.md) for app/disk-image builds and first-launch approval.
