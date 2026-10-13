@@ -38,6 +38,35 @@ passed on all four native targets on 13 October 2026. Its downloaded reports
 confirmed every lifecycle check and graceful service exit; see
 [validation](validation.md#first-named-alpha-release-pass--2026-10-13) for revision and scope.
 
+## Web response recovery
+
+`web/e2e/web-recovery.spec.ts` covers unresponsive Open, explicit confirmation,
+cancellation, conflicts, recovery holds, response rechecks, accessibility and
+narrow layouts with HTTP fixtures. `web/e2e/web-recovery-native.spec.ts` exercises
+the real embedded UI and Vere: a verified private Dojo query runs a long,
+allocation-light computation that blocks HTTP; the confirmed interruption
+restores it, Open preserves the connected
+hostname, and a fresh authenticated session confirms the same identity.
+
+Prepare a new isolated foreground service as described in the agent guide,
+using a private temporary directory named `harbor-web-recovery-UNIQUE` with its
+registry in `data/`. Boot exactly one disposable comet with folder label
+`web-recovery-trial`, wait for its durable job to complete, and supply that
+service's loopback URL explicitly:
+
+```sh
+HARBOR_WEB_RECOVERY_URL=http://127.0.0.1:ACTUAL_PORT \
+  npm --prefix web run test:e2e -- web-recovery-native.spec.ts --workers=1
+```
+
+The test checks the private disposable registry marker, comet identity and label,
+and canonical pier location before sending any input. A read-only process-record
+check verifies that the PID and launch ID stay the same. It disables tracing to
+keep login codes and cookies in memory. It does not select an installed service
+or an existing operator ship.
+Afterward, stop the disposable ship and manager gracefully and confirm that
+their writers exited before removing only that trial's temporary files.
+
 ## Physical storage trial
 
 The intended physical drive must be attached, mounted and UUID-pinned using [external storage](external-storage.md). Do not use an operator's live pier. Place a new disposable trial in a chosen folder on that drive and record its filesystem, capacity, connection/enclosure and actual allocated bytes.

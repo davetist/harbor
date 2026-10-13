@@ -28,6 +28,14 @@ Choose **Manage → Overview → Remove from Harbor** after stopping the ship. T
 
 Active or queued jobs, tracked live processes and unresolved recovery holds prevent removal. Wait for work to finish or resolve the hold first. Removal does not free disk space or delete a ship's identity.
 
+## When Open does not respond
+
+**Open ship** uses the hostname or IP you opened Harbor with and the ship's current HTTP port. Harbor first checks the saved listener's public login page, with a two-second timeout. This checks the ship from the Harbor host; your browser still needs network access to that listener. A running process can be busy compiling apps or performing another long computation even when HTTP stops responding.
+
+If the check fails, Harbor offers **Try Open again**, **Inspect terminal**, and **Interrupt current event…**. Waiting is appropriate while useful work is progressing. Interruption requires a confirmation: it sends Vere's supported Ctrl+C to cancel the current computation without restarting the ship. Canceled work may need to be retried. This is manual recovery, not a fix for the underlying Urbit computation, and Harbor never interrupts automatically after a timeout.
+
+Before sending, Harbor checks the listener again and refuses if it responds. It also refuses during boot, stop, maintenance, queued work, recovery holds, shutdown, or uncertain process ownership. **Interrupt sent** confirms only that the input was sent. Wait briefly and choose **Try Open again** to verify that the ship responds. An existing recovery hold still needs its recorded outcome verified through the separate recovery flow.
+
 ## Loom size
 
 A 2 GiB loom is Urbit's state address-space capacity (`--loom 31`), not a 2 GiB disk allocation or a promise of 2 GiB resident RAM. Harbor currently supports loom exponents 30–32 (1, 2 and 4 GiB). Resident memory, utility working space, snapshots and event logs are separate. A drive adds storage, not RAM. An existing pier's loom must be confirmed accurately; shrinking it is not a migration shortcut.

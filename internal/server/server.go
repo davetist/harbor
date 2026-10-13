@@ -159,6 +159,7 @@ func (s *Server) routes() {
 		respond(w, 200, map[string]string{"output": string(output)})
 	})
 	s.mux.HandleFunc("GET /api/v1/ships/{id}/open", s.open)
+	s.mux.HandleFunc("POST /api/v1/ships/{id}/interrupt", s.interrupt)
 	s.mux.HandleFunc("POST /api/v1/ships/{id}/{operation}", s.action)
 	s.mux.HandleFunc("GET /api/v1/events", s.events)
 	s.mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "not_found", "Endpoint not found.") })
@@ -228,9 +229,10 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		fail(w, 409, "not_ready", "The ship is not ready.")
 		return
 	}
-	host := s.cfg.AdvertisedHost
-	if host == "" {
-		host, _, _ = net.SplitHostPort(r.Host)
+	if err := vr.CheckWeb(r.Context(), v); err != nil {
+		fail(w, 503, "ship_unresponsive", "The ship's web interface is not responding. It may be busy with a long computation. Wait and try Open again, or inspect its terminal.")
+		return
 	}
+	host, _, _ := net.SplitHostPort(r.Host)
 	respond(w, 200, map[string]string{"url": fmt.Sprintf("http://%s", net.JoinHostPort(host, fmt.Sprint(v.WebPort)))})
 }

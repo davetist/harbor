@@ -23,4 +23,5 @@ export interface HarborClient {
   job(id: string): Promise<Job>; schedules(id: string): Promise<Schedule[]>; saveSchedule(schedule: Schedule): Promise<void>;
   resize(id: string, rows: number, cols: number): Promise<void>; logs(id: string): Promise<string>; input(id: string, command: string): Promise<void>; accessCode(id: string): Promise<string>;
   openURL(id: string): Promise<string>; folders(path?: string): Promise<FolderListing>;
+  interrupt(id: string): Promise<void>;
 }

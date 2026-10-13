@@ -9,6 +9,39 @@ Evidence reviewed on 2026-10-13 for the first named public alpha. Native trials 
 | macOS x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 | Linux x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 
+## Open address and manual web recovery — 2026-10-13
+
+The combined source candidate based on `2792348` passed on macOS ARM64. Its
+native runner SHA-256 was
+`ffce938e74223aed6a56ad26a322ff65fb698d1c537842a44b18bb9775116353`.
+Regression checks cover Open using the admitted browser hostname/IP even with
+an advertised hostname configured, bounded public response checks, refusal
+during lifecycle work or recovery holds, canceled requests, process ownership,
+and atomic exclusion of scheduled admission through the interrupt write.
+
+The full serial Go race suite, vet, frontend typecheck/four unit tests, nine
+acceptance-harness regressions, seven package-contract tests, dependency notices
+and dependency advisories passed. The browser fixture suite passed 67 tests;
+six guarded native cases were skipped there. The new web-recovery native case
+ran separately against the embedded production UI and real Vere 4.6: a private
+Dojo computation blocked HTTP, the explicit confirmation sent Ctrl+C, HTTP
+recovered, Open kept the connected hostname, and a fresh authenticated session
+matched the comet. Read-only process records confirmed unchanged PID and launch
+ID. Desktop and 320px recovery/confirmation captures and accessibility checks
+passed. The final universal Mac app/disk-image build passed too.
+
+The same newly created disposable comet subsequently passed stop/start,
+Pack/Roll/Chop, full stopped-source export/restore, a restored-ship checkpoint,
+replay and fresh authenticated logins. An earlier post-Pack restart encountered
+a port collision with a concurrently running Go helper; Harbor retained a hold,
+and supported offline recovery verification succeeded before the serialized
+native retry. Both registered ships and the manager finally stopped gracefully
+with service exit 0, and the private trial state was removed.
+
+This is manual recovery evidence, not prevention of the underlying Urbit
+computation. It does not establish native recovery acceptance on Linux or Intel,
+installer/OS-startup changes, real identities, physical faults or Meld.
+
 ## First named alpha release pass — 2026-10-13
 
 The [four-platform native lifecycle run](https://github.com/davetist/harbor/actions/runs/38387194232)

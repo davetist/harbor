@@ -36,6 +36,11 @@ func TestProcessHelper(t *testing.T) {
 	pierPath := os.Args[len(os.Args)-1]
 	os.WriteFile(filepath.Join(pierPath, ".http.ports"), []byte(port+" insecure loopback\n"), 0600)
 	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := os.Stat(filepath.Join(pierPath, "block-web")); err == nil {
+			os.WriteFile(filepath.Join(pierPath, "probe-started"), nil, 0600)
+			<-r.Context().Done()
+			return
+		}
 		if r.Method == http.MethodPost {
 			fmt.Fprint(w, `"~zod"`)
 			return
@@ -49,8 +54,14 @@ func TestProcessHelper(t *testing.T) {
 		}
 	}()
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGTERM)
-	<-ch
+	signal.Notify(ch, syscall.SIGTERM, syscall.SIGINT)
+	for received := range ch {
+		if received == syscall.SIGTERM {
+			break
+		}
+		os.Remove(filepath.Join(pierPath, "block-web"))
+		fmt.Println("interrupted current event")
+	}
 	listener.Close()
 	os.Exit(0)
 }

@@ -54,6 +54,7 @@ export class PreviewClient implements HarborClient {
   async resize() {}
   async logs(id: string) { return this.data.logs[id] || 'No output yet.' }
   async input(id: string, command: string) { this.data.logs[id] = (this.data.logs[id] || '') + '\n' + command + '[simulated terminal output]\n'; this.save() }
+  async interrupt() { throw new Error('Preview recovery cannot interrupt a real ship.') }
   async accessCode() { return 'sampel-code-for-the-preview' }
   async openURL() { return '/preview.html#ships' }
   async folders(path = '/srv/harbor/piers') {

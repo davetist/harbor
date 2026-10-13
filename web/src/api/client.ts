@@ -1,5 +1,8 @@
 import { subscribeEvents } from './events'
 import type { BackupRecord, BootRequest, FolderListing, HarborClient, HarborUpdate, Host, Job, Operation, Schedule, Ship } from '../model'
+export class APIError extends Error {
+  constructor(message: string, readonly code: string) { super(message) }
+}
 export class APIClient implements HarborClient {
   jobs(id: string) { return this.request<Job[]>(`/ships/${id}/jobs`) }
   async jobLogs(id: string) { return (await this.request<{output: string}>(`/jobs/${id}/logs`)).output }
@@ -14,7 +17,7 @@ export class APIClient implements HarborClient {
   backups(id: string) { return this.request<BackupRecord[]>(`/ships/${id}/backups`) }
   private async request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
     const response = await fetch(`/api/v1${path}`, { method, headers: body instanceof FormData ? undefined : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : body instanceof FormData ? body : JSON.stringify(body) })
-    if (!response.ok) { const value = await response.json().catch(() => ({})); throw new Error(value.error?.message || `Harbor returned ${response.status}.`) }
+    if (!response.ok) { const value = await response.json().catch(() => ({})); throw new APIError(value.error?.message || `Harbor returned ${response.status}.`, value.error?.code || '') }
     return response.status === 204 ? undefined as T : response.json()
   }
   host() { return this.request<Host>('/host') }
@@ -34,6 +37,7 @@ export class APIClient implements HarborClient {
   resize(id: string, rows: number, cols: number) { return this.request<void>(`/ships/${id}/terminal/resize`, 'POST', { rows, cols }) }
   async logs(id: string) { return (await this.request<{output: string}>(`/ships/${id}/logs`)).output }
   input(id: string, input: string) { return this.request<void>(`/ships/${id}/terminal/input`, 'POST', { input }) }
+  interrupt(id: string) { return this.request<void>(`/ships/${id}/interrupt`, 'POST', {}) }
   async accessCode(id: string) { return (await this.request<{code: string}>(`/ships/${id}/access-code`, 'POST', {})).code }
   async openURL(id: string) { return (await this.request<{url: string}>(`/ships/${id}/open`)).url }
   folders(path = '') { return this.request<FolderListing>(`/folders?${new URLSearchParams({ path })}`) }

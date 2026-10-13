@@ -67,7 +67,7 @@ JSON does not expand `~` or environment variables. Unknown fields and relative s
 | --- | --- |
 | `listenAddress` | `0.0.0.0:18789`, Harbor control interface. |
 | `defaultShipHTTPBindAddress` | `0.0.0.0`, IPv4 web binding for new registrations. Existing ships keep their saved binding. |
-| `advertisedHost` | Optional hostname/IP for **Open ship**. Otherwise use the browser's Harbor hostname/IP. This does not change listeners. |
+| `advertisedHost` | Optional hostname/IP accepted when accessing Harbor. **Open ship** uses the browser's Harbor hostname/IP. This does not change listeners. |
 | `dataDir` | Manager database, runtimes, uploads and backups. |
 | `allowedRoots` | Legacy default-folder list; defaults to `dataDir/piers`. The first folder is suggested during setup. Also supplies paths for optional startup volume pins; does not restrict where piers can be stored. |
 | `timezone` | Host IANA timezone; choose explicitly if detection is unsuitable. |
@@ -83,7 +83,7 @@ without scheme, port or path, then gracefully restart the service. An
 unconfigured hostname can be refused even when it resolves to the right machine;
 use the destination IPv4 address while diagnosing it.
 
-Each ship chooses its HTTP port when it starts: Harbor tries port 80 first, then 8080, 8081 and upward, skipping occupied ports and ports reserved by ships currently starting or running. If the OS refuses port 80 without extra privileges, Harbor falls back without requesting them. Stopped ships do not reserve ports, and a ship's port may change after a restart. **Open ship** uses the currently selected port.
+Each ship chooses its HTTP port when it starts: Harbor tries port 80 first, then 8080, 8081 and upward, skipping occupied ports and ports reserved by ships currently starting or running. If the OS refuses port 80 without extra privileges, Harbor falls back without requesting them. Stopped ships do not reserve ports, and a ship's port may change after a restart. **Open ship** uses the browser's Harbor hostname/IP and the ship's currently selected port, so local access stays local and LAN or Tailscale access stays on that network.
 
 Harbor does not filter clients or destination interfaces by IP range. With a wildcard listener, Host must match the actual local destination address or the configured `advertisedHost`; loopback destinations also accept `localhost`. With an explicit listener, Host must match the configured listener host or `advertisedHost`; loopback listeners also accept localhost aliases. Browser mutations check Origin and `Sec-Fetch-Site`. These request checks are not authentication. A client that can reach the control interface can retrieve codes, export piers, stop ships and use the Dojo.
 

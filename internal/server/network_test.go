@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"harbor/internal/model"
 	"net"
 	"net/http"
@@ -72,25 +73,42 @@ func TestIPv6WildcardUsesDestinationHost(t *testing.T) {
 func TestOpenShipUsesBrowserHost(t *testing.T) {
 	h := handler(t)
 	h.cfg.ListenAddress = "0.0.0.0:18789"
-	if err := h.store.PutShip(context.Background(), model.Ship{ID: "a", PierPath: "/test/pier", State: "running", WebPort: 8080}); err != nil {
+	h.cfg.AdvertisedHost = "ship.example"
+	web := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("ready")) }))
+	defer web.Close()
+	port := web.Listener.Addr().(*net.TCPAddr).Port
+	if err := h.store.PutShip(context.Background(), model.Ship{ID: "a", PierPath: "/test/pier", State: "running", HTTPBindAddress: "127.0.0.1", WebPort: port}); err != nil {
 		t.Fatal(err)
 	}
-	for _, host := range []string{"192.168.50.10", "100.64.0.10", "127.0.0.1", "192.0.2.10", "100.63.1.2", "100.128.1.2"} {
-		r := networkRequest("GET", net.JoinHostPort(host, "18789"), host, host, "/api/v1/ships/a/open")
-		w := httptest.NewRecorder()
-		h.ServeHTTP(w, r)
-		var result struct {
-			URL string `json:"url"`
-		}
-		if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || result.URL != "http://"+net.JoinHostPort(host, "8080") {
-			t.Fatalf("%s: %d %s (%v)", host, w.Code, w.Body.String(), err)
-		}
+	for _, tc := range []struct {
+		host, local, want string
+	}{
+		{"127.0.0.1", "127.0.0.1", "http://127.0.0.1:%d"},
+		{"localhost", "127.0.0.1", "http://localhost:%d"},
+		{"192.168.50.10", "192.168.50.10", "http://192.168.50.10:%d"},
+		{"100.64.0.10", "100.64.0.10", "http://100.64.0.10:%d"},
+		{"ship.example", "100.64.0.10", "http://ship.example:%d"},
+		{"192.0.2.10", "192.0.2.10", "http://192.0.2.10:%d"},
+		{"100.63.1.2", "100.63.1.2", "http://100.63.1.2:%d"},
+		{"100.128.1.2", "100.128.1.2", "http://100.128.1.2:%d"},
+		{"2001:db8::10", "2001:db8::10", "http://[2001:db8::10]:%d"},
+	} {
+		t.Run(tc.host, func(t *testing.T) {
+			r := networkRequest("GET", net.JoinHostPort(tc.host, "18789"), tc.local, tc.local, "/api/v1/ships/a/open")
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			var result struct {
+				URL string `json:"url"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || result.URL != fmt.Sprintf(tc.want, port) {
+				t.Fatalf("%s: %d %s (%v)", tc.host, w.Code, w.Body.String(), err)
+			}
+		})
 	}
-	h.cfg.AdvertisedHost = "ship.example"
-	r := networkRequest("GET", "192.168.50.10:18789", "192.168.50.10", "192.168.50.20", "/api/v1/ships/a/open")
+	r := networkRequest("GET", "other.example:18789", "100.64.0.10", "100.64.0.20", "/api/v1/ships/a/open")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
-	if w.Code != 200 || !strings.Contains(w.Body.String(), "http://ship.example:8080") {
-		t.Fatalf("explicit advertised host ignored: %d %s", w.Code, w.Body.String())
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("unconfigured hostname accepted: %d %s", w.Code, w.Body.String())
 	}
 }

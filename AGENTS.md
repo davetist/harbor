@@ -217,7 +217,8 @@ The folder browser reads the runner host's directories with its OS user's access
 
 The default control listener is IPv4 `0.0.0.0:18789`. Ship starts try HTTP port 80,
 then 8080 upward; stopped ships do not reserve ports, so a restart can change one.
-`advertisedHost` admits the configured hostname and changes Open links, not bindings. Existing ships retain their saved
+`advertisedHost` admits the configured hostname; Open links use the browser's
+Harbor hostname/IP. It does not change bindings. Existing ships retain their saved
 HTTP binding when defaults change. Harbor has no separate login: every reachable
 control client can manage all ships. Host/origin checks are not authentication and
 do not protect ship HTTP listeners. Keep access on trusted LANs/tailnets with
@@ -286,6 +287,12 @@ operator action; ordinary installs fall back from port 80 without changing permi
    Host/Origin, and external network policy. For UI state, inspect API failures,
    SSE reconnect/resync, and whether embedded assets were rebuilt. Keep protections
    enabled while reproducing the issue.
+   Open checks the saved ship listener with a bounded public login request. A
+   running process can still be busy or unresponsive. Its recovery dialog offers
+   a confirmed Ctrl+C for the owned running ship, after rechecking responsiveness,
+   pending work, recovery holds and process identity. Never interrupt a real
+   ship's computation without operator authorization; a timeout alone does not
+   prove it is stuck. See [web recovery](docs/onboarding.md#when-open-does-not-respond).
 5. For boot/maintenance, inspect runtime digest/architecture, argument order, loom,
    actual allocated HTTP port, canonical pier path, writer ownership, job output,
    resource gates, and LMDB selection. For storage refusal, confirm the expected
