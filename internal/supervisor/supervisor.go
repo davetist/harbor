@@ -28,6 +28,7 @@ type child struct {
 	release      func()
 	stopping     bool
 	initializing bool
+	ship         model.Ship
 }
 type Supervisor struct {
 	store     *store.Store
@@ -68,6 +69,51 @@ func (s *Supervisor) Start(ctx context.Context, jobID, shipID model.ID) error {
 	if e != nil {
 		return e
 	}
+	// A failed readiness check does not stop the owned runtime. An explicit
+	// Start can check that same launch again without creating a second writer.
+	s.mu.Lock()
+	c := s.children[ship.ID]
+	if c != nil {
+		ship, e = s.store.GetShip(ctx, shipID)
+		if e != nil {
+			s.mu.Unlock()
+			return e
+		}
+		if ship.State != "failed" || c.stopping || ship.RecoveryBlocked {
+			s.mu.Unlock()
+			return errors.New("ship already has an owned process or requires recovery")
+		}
+		if e = s.ValidatePier(ship, false); e == nil && !sameLaunch(ship, c.ship) {
+			e = errors.New("ship configuration changed; refusing to reuse the owned process")
+		}
+		if e == nil {
+			digest, err := vr.FileDigest(ship.RuntimePath)
+			if err != nil || digest != c.record.BinaryDigest {
+				e = errors.New("runtime binary changed; refusing to reuse the owned process")
+			}
+		}
+		if e == nil {
+			identity, err := StartIdentity(c.record.PID)
+			if err != nil || identity == "" || identity != c.record.StartIdentity {
+				e = errors.New("process identity changed; refusing to reuse the owned process")
+			}
+		}
+		if e == nil {
+			e = ctx.Err()
+		}
+		if e == nil {
+			ship.State = "starting"
+			ship.Error = ""
+			e = s.store.PutShip(ctx, ship)
+		}
+		s.mu.Unlock()
+		if e != nil {
+			return e
+		}
+		s.changed(ship)
+		return s.awaitReadiness(ctx, ship, c)
+	}
+	s.mu.Unlock()
 	args, e := vr.BuildArgs(ship, "start")
 	if e != nil {
 		return e
@@ -158,7 +204,7 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 	record.PID = cmd.Process.Pid
 	record.StartIdentity, e = StartIdentity(record.PID)
 	record.Phase = "live"
-	c := &child{cmd: cmd, tty: tty, done: make(chan struct{}), record: record, release: release, initializing: newDestination}
+	c := &child{cmd: cmd, tty: tty, done: make(chan struct{}), record: record, release: release, initializing: newDestination, ship: ship}
 	s.mu.Lock()
 	s.children[ship.ID] = c
 	s.mu.Unlock()
@@ -169,6 +215,33 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 		s.hold(ship.ID, "Process identity could not be persisted; verify recovery before reuse.")
 		return errors.New("process identity could not be recorded")
 	}
+	return s.awaitReadiness(ctx, ship, c)
+}
+
+func sameLaunch(current, launched model.Ship) bool {
+	return current.PierPath == launched.PierPath && current.RuntimePath == launched.RuntimePath &&
+		current.LoomExponent == launched.LoomExponent && current.HTTPBindAddress == launched.HTTPBindAddress &&
+		current.WebPort == launched.WebPort
+}
+
+func (s *Supervisor) awaitReadiness(ctx context.Context, ship model.Ship, c *child) (result error) {
+	defer func() {
+		if result == nil {
+			return
+		}
+		s.mu.Lock()
+		current, err := s.store.GetShip(context.Background(), ship.ID)
+		if err == nil && s.children[ship.ID] == c && !c.stopping && !current.RecoveryBlocked && current.State == "starting" {
+			current.State = "failed"
+			current.Error = "Ship readiness was not confirmed. The process is still tracked; use Start ship to check again, or inspect the terminal."
+			err = s.store.PutShip(context.Background(), current)
+			if err == nil {
+				s.changed(current)
+			}
+		}
+		s.mu.Unlock()
+		result = errors.Join(result, err)
+	}()
 	client := &http.Client{Timeout: 2 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	timer := time.NewTicker(250 * time.Millisecond)
 	defer timer.Stop()
@@ -208,12 +281,11 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 			if lookupErr != nil {
 				continue // Public HTTP can answer while the worker is still initializing.
 			}
-			current.State = "running"
-			current.Identity = identity
-			identityContext, cancel = context.WithTimeout(ctx, 10*time.Second)
-			if capabilities, lookupErr := vr.ProbeCapabilities(identityContext, current.RuntimePath); lookupErr == nil {
-				current.RuntimeVersion = "Vere " + capabilities.Version
+			if current.Identity != "" && current.Identity != identity {
+				return errors.New("private control port belongs to a different ship")
 			}
+			identityContext, cancel = context.WithTimeout(ctx, 10*time.Second)
+			capabilities, capabilityErr := vr.ProbeCapabilities(identityContext, current.RuntimePath)
 			cancel()
 			s.mu.Lock()
 			if s.children[ship.ID] != c {
@@ -223,6 +295,32 @@ func (s *Supervisor) launchShip(ctx context.Context, jobID model.ID, ship model.
 			if c.stopping {
 				s.mu.Unlock()
 				return errors.New("ship start interrupted by graceful stop; process remains tracked")
+			}
+			current, err = s.store.GetShip(context.Background(), ship.ID)
+			if err == nil && (current.RecoveryBlocked || current.State != "starting" || !sameLaunch(current, c.ship)) {
+				err = errors.New("ship state or configuration changed during readiness")
+			}
+			if err == nil && current.Identity != "" && current.Identity != identity {
+				err = errors.New("private control port belongs to a different ship")
+			}
+			if err == nil {
+				processIdentity, identityErr := StartIdentity(c.record.PID)
+				if identityErr != nil || processIdentity == "" || processIdentity != c.record.StartIdentity {
+					err = errors.New("process identity changed during readiness")
+				}
+			}
+			if err == nil {
+				err = ctx.Err()
+			}
+			if err != nil {
+				s.mu.Unlock()
+				return err
+			}
+			current.State = "running"
+			current.Error = ""
+			current.Identity = identity
+			if capabilityErr == nil {
+				current.RuntimeVersion = "Vere " + capabilities.Version
 			}
 			c.initializing = false
 			if err = s.store.PutShip(context.Background(), current); err != nil {
@@ -245,9 +343,13 @@ func (s *Supervisor) wait(id model.ID, c *child) {
 	if e != nil {
 		code = c.cmd.ProcessState.ExitCode()
 	}
-	c.record.Phase = "exited"
-	c.record.ExitCode = &code
-	s.store.PutProcess(context.Background(), c.record)
+	// Keep the child's launch identity immutable while readiness/stop inspect it.
+	s.mu.Lock()
+	record := c.record
+	s.mu.Unlock()
+	record.Phase = "exited"
+	record.ExitCode = &code
+	s.store.PutProcess(context.Background(), record)
 	c.tty.Close()
 	c.release()
 	s.mu.Lock()

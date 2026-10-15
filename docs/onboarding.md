@@ -16,6 +16,8 @@ Choose **Try a comet**, choose a local folder label/destination and boot. Vere c
 
 See the [LMDB mapping workaround](lmdb-mapping-workaround.md) for growth and address-space limits, supported maintenance utilities, unsupported replay/update-preparation paths and the criteria for retiring it after a verified upstream fix.
 
+If a start times out before readiness is confirmed, the job fails and the ship shows **Needs attention**. Harbor keeps tracking its runtime and holds the pier lock. Open the ship overview and choose **Start ship** to check that same process again. Inspect the terminal while bootstrap is still progressing. A maintenance recovery hold must be resolved through its separate recovery flow.
+
 ## Register an existing folder
 
 Stop the ship in its previous runner. Copy or move the complete pier, including hidden `.urb` contents, to the Harbor host if necessary. Choose **Use an existing pier → Existing folder** and select its host path. Harbor registers it in place, checks writer ownership and preserves the confirmed loom requirement. It does not upload or copy that folder automatically, and does not lower the loom to fit the new machine.

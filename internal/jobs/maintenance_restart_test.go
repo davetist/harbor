@@ -42,7 +42,7 @@ func TestMaintenanceRuntimeHelper(t *testing.T) {
 	signal.Notify(ch, syscall.SIGTERM)
 	go http.Serve(listener, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			if mode == "unready" {
+			if _, err := os.Stat(filepath.Join(os.Args[len(os.Args)-1], "finish-readiness")); mode == "unready" && err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
