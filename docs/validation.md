@@ -1,6 +1,6 @@
 # Validation
 
-Evidence reviewed on 2026-10-13 for the first named public alpha. Native trials use isolated disposable fake ships or fresh comets, never an operator's existing pier or identity key. Cross-built artifacts and simulated browser tests are recorded separately from native acceptance. Older dated sections describe their own candidates, not a repeat of those checks on the public alpha.
+Release evidence was reviewed on 2026-10-13 for the first named public alpha; later dated sections identify their own candidates. Native trials use isolated disposable fake ships or fresh comets, never an operator's existing pier or identity key. Cross-built artifacts and simulated browser tests are recorded separately from native acceptance. Each dated section describes its own candidate, not a repeat of those checks on another release.
 
 | Target | Evidence | Remaining |
 | --- | --- | --- |
@@ -8,6 +8,68 @@ Evidence reviewed on 2026-10-13 for the first named public alpha. Native trials 
 | Linux ARM64 | Raspberry Pi 4/8 GB: native service/UI, Mac export restore/login, 4.5→4.6 update/replay, maintenance and due schedule, systemd graceful utility shutdown, Pack interruption holds and fresh restored-folder login. Shared map policy: isolated folder import, repeated/automatic/post-Pack restart and oversized-import refusal. Combined alpha.3 candidate: supplemental stopped-comet import, all four maintenance commands, export/restore/checkpoint replay and authenticated restarts; actual mappings checked. | Physical-drive disconnect/power-loss, valid disposable keys, real identities, larger active ships and broader failure/recovery windows. A separate untraced Pack crash remains held with unresolved cause. |
 | macOS x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 | Linux x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
+
+## Security fix candidate — 2026-10-16
+
+The source candidate for alpha 2 addresses all 14 findings from the deep security
+scan, combining overlapping archive, native-storage, lock and temporary-folder
+issues. The final serial Go race suite passed 453 tests across 16 packages; four
+existing opt-in cases remained guarded. Go vet, the embedded production build,
+frontend typecheck/four unit tests, nine native-acceptance harness tests, eight
+package-contract tests, module download and third-party notices passed. Separate
+cross-builds passed for Linux amd64/arm64 and macOS amd64. A private native Mac
+icon-generation trial passed without replacing the tracked icon.
+
+On macOS ARM64 with Vere 4.6, a fresh disposable comet passed authenticated login,
+stop/start, Pack/Roll/Chop, stopped-source export/restore, checkpoint replay and
+graceful shutdown. That runner's SHA-256 was
+`a5a125d0a7d68169dc3cfc357fc508d9810bd72a18bdd340394648d821718994`.
+The final manifest-parser correction was then tested with another fresh export,
+upload/import, native boot, authenticated login, stop and shutdown. That final
+runner's SHA-256 was
+`896640718526ce6bf9516f94b6890576b3ce369499626f4ee7a5c5df08b17ad2`.
+All trial ships stopped, managers exited 0 and recorded child processes exited
+before disposable state was removed. Existing recovery changes, installed
+services and real ships were preserved.
+
+These are local source-candidate checks. They do not establish native Linux or
+Intel lifecycle acceptance for alpha 2, installation/upgrades, Meld, runtime
+transitions, identity-key migration or physical-fault behavior. Tagged hosted
+checks and installer builds are linked from the release; earlier dated trials
+retain their own scope.
+
+## Interrupted Stop recovery — 2026-10-16
+
+The recovery candidate based on `4962ebb` passed the real recovery API with
+Vere 4.6 on native macOS ARM64 and Raspberry Pi Linux ARM64. Each trial used a
+fresh private Harbor registry and a public fake-pier fixture. The harness
+inserted the stopped-intent/running-before-Stop crash boundary into that fixture
+registry, then restarted Harbor to exercise process observation and interrupted
+job reconciliation. It did not inject physical power loss or use a real identity.
+
+The intact fixture returned HTTP 204, recorded a successful native `info`
+process, cleared the hold and stayed stopped with no restart queued. Hashes of
+all six event/snapshot files were unchanged. The released hold and stopped intent
+survived another manager restart. A second fixture had an incomplete latest
+epoch: verification returned HTTP 409, retained the hold and preserved every
+original file. The prior direct-on-original inspector was separately shown to
+accept fallback and discard that epoch on a disposable macOS fixture.
+
+| Native candidate | Harbor runner SHA-256 |
+| --- | --- |
+| macOS ARM64 | `db629cffb005a9b018c603332eff5018c538818858fabf38ffc7b8d528af1366` |
+| Linux ARM64, `0.1.0-main.17.stop-recovery.2` | `aad4e74853822baad41a8c930d82ae8c69e515648710e78a6b58bdd3834e98ea` |
+
+The serial Go race suite, vet, frontend typecheck/four unit tests, nine
+acceptance-harness tests, seven package-contract tests, embedded production build,
+dependency notices and ARM64 package build passed. Focused regressions cover
+Stop admission/refusals, unchanged original data, copied-file and directory
+mutations, lock-file exclusions, link refusal, copy-space refusal, cleanup and
+LMDB argument placement. All disposable managers exited cleanly.
+
+This establishes the offline recovery path on those candidates. It does not
+establish full historical replay, automatic checkpoint repair, native Intel
+acceptance of this change, or a production package upgrade.
 
 ## Open address and manual web recovery — 2026-10-13
 

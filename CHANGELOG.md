@@ -2,7 +2,18 @@
 
 ## Unreleased
 
-No changes recorded after the first named alpha.
+No changes recorded after the second named alpha.
+
+## [0.1.0-alpha.2](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.2) — 2026-10-16
+
+See the [release notes](docs/releases/0.1.0-alpha.2.md) for downloads and the validation boundary.
+
+- Preserve the connected Harbor hostname/IP in Open ship links and offer an explicit, confirmed interrupt when the ship's web interface does not respond. Readiness failures retain process ownership and recovery evidence.
+- Bound archive payload, GNU/PAX metadata, manifest allocations, retained paths, implicit directories and parsing work; validate component-by-component link resolution and restore through opened directory handles. Export uses the same limits, and restore reserves metadata/inode capacity.
+- Refuse aliased native locks and replaceable storage ancestry before ship/utility launch, preserve replacement directories during temporary cleanup, and isolate the optional Mac icon compiler in a private temporary folder with fail-fast execution.
+- Recover an interrupted Stop by checking the current pier offline when Harbor recorded a running ship, persisted stopped intent and has no live or uncertain process. Successful verification releases the hold and leaves the ship stopped; incomplete evidence or failed inspection retains the hold.
+- Apply adaptive LMDB sizing to offline recovery inspection (`info`), with unsafe-storage refusal before recording or spawning the verification process.
+- Isolate recovery inspection from the original pier: Vere checks a private copy of current event logs and snapshots, and any data or directory changes retain the hold. This prevents `info` from discarding incomplete epochs, applying checkpoint patches or migrating the held pier. The original remains locked through hold release; temporary-copy disk capacity is checked before copying.
 
 ## [0.1.0-alpha.1](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.1) — 2026-10-13
 

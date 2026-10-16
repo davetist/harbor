@@ -62,15 +62,27 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	if latest == nil {
 		return errors.New("no recorded operation can establish this pier's outcome")
 	}
+	confirmed := false
 	switch latest.Kind {
+	case "stop":
+		// Stop does not run an offline utility. PriorRunning is recorded only
+		// after admission checks; saved stopped intent proves Stop progressed
+		// past that point. The original ship process is checked above, and the
+		// current pier must still pass offline inspection before release.
+		if latest.Phase != "interrupted" || !latest.PriorRunning || ship.DesiredRunning {
+			return errors.New("the interrupted Stop did not record a running ship and stopped intent; hold remains")
+		}
+		confirmed = true
 	case "pack", "meld", "roll", "chop":
 	default:
 		return errors.New("this interrupted operation requires recovery from a pier archive without rolling back live network history")
 	}
-	confirmed := false
 	for _, p := range records {
 		if p.Operation == "verify" {
 			continue
+		}
+		if latest.Kind == "stop" {
+			return errors.New("an unexpected process was recorded for Stop; hold remains")
 		}
 		// Maintenance can launch a ship after the utility exits. A closed
 		// restart is not another utility outcome; offline verification follows.
@@ -88,6 +100,16 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	if !confirmed {
 		return errors.New("missing utility outcome; hold remains")
 	}
+	release, err := pier.Guard(ship.PierPath)
+	if err != nil {
+		return errors.New("pier is in use")
+	}
+	defer release()
+	unblock, err := pier.ExcludeWriter(ship.PierPath)
+	if err != nil {
+		return err
+	}
+	defer unblock()
 	if err = e.verifyOffline(context.WithoutCancel(ctx), ship, latest.ID); err != nil {
 		return err
 	}
@@ -103,6 +125,7 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	return nil
 }
 func (e *Executor) inspectOffline(ctx context.Context, ship model.Ship, job model.ID) error {
+	// VerifyAndReleaseHold keeps both source locks through the final store write.
 	if err := e.supervisor.ValidatePier(ship, false); err != nil {
 		return err
 	}
@@ -116,25 +139,28 @@ func (e *Executor) inspectOffline(ctx context.Context, ship model.Ship, job mode
 	if err = vr.ValidateBinary(ship.RuntimePath, platform); err != nil {
 		return err
 	}
-	release, err := pier.Guard(ship.PierPath)
+	mapArgs, err := vr.LMDBMapArgs(ctx, ship.PierPath, false)
 	if err != nil {
-		return errors.New("pier is in use")
-	}
-	defer release()
-	if locked, err := pier.WriterLocked(ship.PierPath); err != nil || locked {
-		return errors.New("pier still has a writer")
+		return err
 	}
 	digest, err := vr.FileDigest(ship.RuntimePath)
 	if err != nil {
 		return err
 	}
+	inspection, err := e.copyForInspection(ctx, ship.PierPath)
+	if err != nil {
+		return errors.New("could not prepare a private inspection copy; check free disk space and storage access; hold remains")
+	}
+	defer inspection.close()
 	p := model.ProcessRecord{LaunchID: model.NewID(), JobID: job, ShipID: ship.ID, Kind: "utility", Operation: "verify", Phase: "launching", BinaryDigest: digest}
 	if err = e.store.PutProcess(ctx, p); err != nil {
 		return err
 	}
-	// Vere info loads the offline snapshot/event store and exits. It never boots
-	// an HTTP server or sends an Arvo event; all diagnostic output is discarded.
-	cmd := exec.Command(ship.RuntimePath, "info", "--loom", strconv.Itoa(ship.LoomExponent), ship.PierPath)
+	// Info may migrate or fall back during load. Run it only on the private copy
+	// and reject changed storage, even on exit zero. It never boots a ship server.
+	args := append([]string{"info"}, mapArgs...)
+	args = append(args, "--loom", strconv.Itoa(ship.LoomExponent), inspection.path)
+	cmd := exec.Command(ship.RuntimePath, args...)
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	if err = cmd.Start(); err != nil {
@@ -156,5 +182,8 @@ func (e *Executor) inspectOffline(ctx context.Context, ship model.Ship, job mode
 	if err != nil || persist != nil || wait != nil || save != nil {
 		return errors.New("offline snapshot/event verification did not succeed; hold remains")
 	}
-	return nil
+	if err = inspection.unchanged(ctx); err != nil {
+		return err
+	}
+	return inspection.close()
 }

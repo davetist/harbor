@@ -182,9 +182,9 @@ func TestReplayAndUpdateUtilitiesKeepOriginalArgs(t *testing.T) {
 	}{{"replay", []string{"play", "--full", "--loom", "31"}}, {"update", []string{"prep", "--loom", "31"}}} {
 		t.Run(string(trial.op), func(t *testing.T) {
 			ex, st, ship, capture := utilityMappingExecutor(t)
-			// These subcommands cannot accept the map override and must not run
-			// its storage admission scan either.
-			if err := os.Symlink(t.TempDir(), filepath.Join(ship.PierPath, ".urb/log/data.mdb")); err != nil {
+			// These subcommands cannot accept the map override. They still require
+			// the common native-storage safety checks before executing.
+			if err := os.WriteFile(filepath.Join(ship.PierPath, ".urb/log/data.mdb"), []byte("fixture"), 0600); err != nil {
 				t.Fatal(err)
 			}
 			j := mappingTestJob(t, st, ship, trial.op)

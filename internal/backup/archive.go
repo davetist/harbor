@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"golang.org/x/sys/unix"
 	"harbor/internal/pier"
 	"io"
@@ -111,6 +110,10 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 		return m, e
 	}
 	defer unblock()
+	nativeLock, e := os.Lstat(filepath.Join(real, ".vere.lock"))
+	if e != nil {
+		return m, e
+	}
 	f, e := os.CreateTemp(parent, ".harbor-export-")
 	if e != nil {
 		return m, e
@@ -121,10 +124,14 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 		return m, e
 	}
 	gz := gzip.NewWriter(f)
-	tw := tar.NewWriter(gz)
+	budget := &archiveWriter{w: gz}
+	tw := tar.NewWriter(budget)
 	m.Version = 1
 	m.CreatedAt = time.Now().UTC()
 	m.Files = []File{}
+	objects := newObjectBudget()
+	observed := map[string]File{}
+	retained := 0
 	var total int64
 	e = filepath.Walk(real, func(p string, info os.FileInfo, walkErr error) error {
 		if walkErr != nil {
@@ -141,7 +148,12 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 			return e
 		}
 		rel = filepath.ToSlash(rel)
-		if rel == ".vere.lock" || rel == ".urb/conn.sock" || rel == ".http.ports" {
+		if _, e = safeEntry("pier/" + rel); e != nil {
+			return e
+		}
+		// Walk returns the stored spelling, which can differ from .vere.lock on
+		// case-insensitive filesystems. Never open/close our held POSIX inode.
+		if os.SameFile(info, nativeLock) || rel == ".urb/conn.sock" || rel == ".http.ports" {
 			return nil
 		}
 		if info.Mode().IsRegular() && runtimeLock(rel) {
@@ -184,10 +196,22 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 		default:
 			return errors.New("unsupported special file in pier")
 		}
+		if e = boundedPath(v.Link); e != nil {
+			return e
+		}
+		retained += len(v.Path) + len(v.Link)
+		if retained > maxRetainedMetadata {
+			return errors.New("pier archive metadata exceeds limit")
+		}
+		if e = objects.add(v); e != nil {
+			return e
+		}
+		budget.header = true
 		if e = tw.WriteHeader(h); e != nil {
 			return e
 		}
 		if v.Kind == "file" {
+			budget.header = false
 			input, e := os.Open(p)
 			if e != nil {
 				return e
@@ -204,6 +228,7 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 			v.SHA256 = hex.EncodeToString(hash.Sum(nil))
 		}
 		m.Files = append(m.Files, v)
+		observed[v.Path] = v
 		return nil
 	})
 	if e != nil {
@@ -211,13 +236,17 @@ func ExportWithMetadata(ctx context.Context, source, destination string, m Manif
 		gz.Close()
 		return m, e
 	}
+	if e = validateManifest(ctx, m, observed); e != nil {
+		return m, e
+	}
 	b, e := json.Marshal(m)
 	if e != nil {
 		return m, e
 	}
-	if len(b) > 32<<20 {
+	if len(b) > maxManifestBytes {
 		return m, errors.New("archive manifest exceeds limit")
 	}
+	budget.header = true
 	if e = tw.WriteHeader(&tar.Header{Name: manifestName, Mode: 0600, Size: int64(len(b)), Typeflag: tar.TypeReg}); e != nil {
 		return m, e
 	}
@@ -246,12 +275,17 @@ func safeEntry(name string) (string, error) {
 		return "", errors.New("archive entry is outside pier root")
 	}
 	p := strings.TrimPrefix(name, "pier/")
-	if p == "" || path.Clean(p) != p || path.IsAbs(p) || p == ".." || strings.HasPrefix(p, "../") || strings.Contains(p, "\\") || strings.ContainsRune(p, 0) {
+	if err := boundedPath(p); err != nil {
+		return "", err
+	}
+	if p == "" || p == "." || path.Clean(p) != p || path.IsAbs(p) || p == ".." || strings.HasPrefix(p, "../") || strings.Contains(p, "\\") || strings.ContainsRune(p, 0) {
 		return "", errors.New("invalid archive path")
 	}
-	return p, nil
+	return strings.Clone(p), nil
 }
 func scan(ctx context.Context, archive string, visit func(File, io.Reader) error) (Manifest, error) {
+	ctx, cancel := context.WithTimeout(ctx, ArchiveTimeout)
+	defer cancel()
 	var m Manifest
 	f, e := os.Open(archive)
 	if e != nil {
@@ -263,11 +297,15 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 		return m, e
 	}
 	defer gz.Close()
-	tr := tar.NewReader(gz)
+	budget := &archiveReader{ctx: ctx, r: gz}
+	tr := tar.NewReader(budget)
 	observed := make(map[string]File)
+	objects := newObjectBudget()
 	var total int64
+	retained := 0
 	found := false
 	for {
+		budget.header = true
 		h, e := tr.Next()
 		if e == io.EOF {
 			break
@@ -279,13 +317,12 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 			return m, e
 		}
 		if h.Name == manifestName {
-			if found || h.Typeflag != tar.TypeReg || h.Size > 32<<20 {
+			if found || h.Typeflag != tar.TypeReg || h.Size > maxManifestBytes {
 				return m, errors.New("invalid archive manifest")
 			}
-			d := json.NewDecoder(io.LimitReader(tr, 32<<20+1))
-			d.DisallowUnknownFields()
-			if e = d.Decode(&m); e != nil {
-				return m, errors.New("invalid archive manifest JSON")
+			m, e = decodeManifest(tr, len(observed))
+			if e != nil {
+				return m, e
 			}
 			found = true
 			continue
@@ -303,6 +340,16 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 		if len(observed) >= maxFiles {
 			return m, errors.New("too many archive entries")
 		}
+		if e = boundedPath(h.Linkname); e != nil {
+			return m, e
+		}
+		retained += len(name) + len(h.Linkname)
+		if retained > maxRetainedMetadata {
+			return m, errors.New("archive retained metadata limit exceeded")
+		}
+		if (name == ".vere.lock" || name == ".http.ports" || runtimeLock(name)) && h.Typeflag != tar.TypeReg && h.Typeflag != tar.TypeRegA {
+			return m, errors.New("native runtime control files must not be links or directories")
+		}
 		v := File{Path: name, Size: h.Size, Mode: uint32(h.Mode) & 0777, Modified: h.ModTime}
 		switch h.Typeflag {
 		case tar.TypeReg, tar.TypeRegA:
@@ -314,6 +361,10 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 				return m, errors.New("archive exceeds extracted-size limit")
 			}
 			v.Kind = "file"
+			if e = objects.add(v); e != nil {
+				return m, e
+			}
+			budget.header = false
 			hash := sha256.New()
 			reader := io.TeeReader(contextReader{ctx, tr}, hash)
 			if visit != nil {
@@ -332,6 +383,9 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 		case tar.TypeDir:
 			v.Kind = "directory"
 			v.Size = 0
+			if e = objects.add(v); e != nil {
+				return m, e
+			}
 			if visit != nil {
 				if e = visit(v, nil); e != nil {
 					return m, e
@@ -340,7 +394,10 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 		case tar.TypeSymlink:
 			v.Kind = "symlink"
 			v.Size = 0
-			v.Link = h.Linkname
+			v.Link = strings.Clone(h.Linkname)
+			if e = objects.add(v); e != nil {
+				return m, e
+			}
 			target := path.Clean(path.Join(path.Dir(name), h.Linkname))
 			if path.IsAbs(h.Linkname) || strings.Contains(h.Linkname, "\\") || target == ".." || strings.HasPrefix(target, "../") {
 				return m, errors.New("symlink escapes archive")
@@ -362,65 +419,16 @@ func scan(ctx context.Context, archive string, visit func(File, io.Reader) error
 }
 
 func validateManifest(ctx context.Context, m Manifest, observed map[string]File) error {
-	if m.Version != 1 || len(m.Files) != len(observed) {
-		return errors.New("archive integrity manifest missing or incomplete")
-	}
-	seen := make(map[string]bool)
-	// Cache only complete, valid suffixes. Every observed node is traversed
-	// once, even when many links share a long chain; keep this iterative.
-	resolved := make(map[string]bool)
-	for _, expected := range m.Files {
-		if e := ctx.Err(); e != nil {
-			return e
-		}
-		v, ok := observed[expected.Path]
-		if !ok || seen[expected.Path] || v.Kind != expected.Kind || v.Size != expected.Size || v.Link != expected.Link || v.SHA256 != expected.SHA256 || v.Mode != expected.Mode {
-			return fmt.Errorf("archive integrity check failed for %q", expected.Path)
-		}
-		seen[expected.Path] = true
-		for parent := path.Dir(expected.Path); parent != "."; parent = path.Dir(parent) {
-			if e := ctx.Err(); e != nil {
-				return e
-			}
-			if observed[parent].Kind == "symlink" {
-				return errors.New("archive writes through a symlink")
-			}
-		}
-		if v.Kind == "symlink" && !resolved[v.Path] {
-			target := v.Path
-			visited := make(map[string]bool)
-			for {
-				if e := ctx.Err(); e != nil {
-					return e
-				}
-				if resolved[target] {
-					break
-				}
-				if visited[target] {
-					return errors.New("cyclic archive symlink")
-				}
-				visited[target] = true
-				entry, ok := observed[target]
-				if !ok {
-					return errors.New("symlink target missing from archive")
-				}
-				if entry.Kind != "symlink" {
-					break
-				}
-				target = path.Clean(path.Join(path.Dir(target), entry.Link))
-			}
-			for target := range visited {
-				if e := ctx.Err(); e != nil {
-					return e
-				}
-				resolved[target] = true
-			}
-		}
-	}
-	return nil
+	return validateArchiveManifest(ctx, m, observed)
 }
 func Validate(ctx context.Context, archive string) (Manifest, error) { return scan(ctx, archive, nil) }
 func Restore(ctx context.Context, archive, destination string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, ArchiveTimeout)
+	defer cancel()
+	return restore(ctx, archive, destination)
+}
+
+func restore(ctx context.Context, archive, destination string) (string, error) {
 	m, e := Validate(ctx, archive)
 	if e != nil {
 		return "", e
@@ -433,29 +441,29 @@ func Restore(ctx context.Context, archive, destination string) (string, error) {
 		return "", e
 	}
 	destination = filepath.Join(parent, filepath.Base(destination))
-	var total uint64
-	for _, v := range m.Files {
-		if v.Kind == "file" {
-			total += uint64(v.Size)
-		}
-	}
 	var fs unix.Statfs_t
 	if e = unix.Statfs(parent, &fs); e != nil {
 		return "", e
 	}
-	if total > uint64(fs.Bavail)*uint64(fs.Bsize) {
-		return "", errors.New("not enough free storage to restore full pier")
+	if e = restoreCapacity(m, fs); e != nil {
+		return "", e
 	}
-	stage, e := os.MkdirTemp(parent, ".harbor-restore-")
+	work, e := pier.NewTempDir(parent, ".harbor-restore-")
 	if e != nil {
 		return "", e
 	}
-	defer os.RemoveAll(stage)
+	defer work.Close()
+	stage := work.Path
+	root, e := os.OpenRoot(stage)
+	if e != nil {
+		return "", e
+	}
+	defer root.Close()
 	var links []File
 	_, e = scan(ctx, archive, func(v File, r io.Reader) error {
 		// Older valid archives may contain runtime locks. scan still consumes
 		// and verifies their bytes against the manifest, without restoring them.
-		if v.Kind == "file" && runtimeLock(v.Path) {
+		if v.Kind == "file" && (runtimeLock(v.Path) || v.Path == ".vere.lock" || v.Path == ".http.ports") {
 			return nil
 		}
 		p := filepath.Join(stage, filepath.FromSlash(v.Path))
@@ -463,16 +471,16 @@ func Restore(ctx context.Context, archive, destination string) (string, error) {
 			return errors.New("invalid restore path")
 		}
 		if v.Kind == "directory" {
-			return os.MkdirAll(p, 0700)
+			return restoreDirectories(root, v.Path)
 		}
 		if v.Kind == "symlink" {
 			links = append(links, v)
 			return nil
 		}
-		if e = os.MkdirAll(filepath.Dir(p), 0700); e != nil {
+		if e = restoreDirectories(root, path.Dir(v.Path)); e != nil {
 			return e
 		}
-		f, e := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		f, e := root.OpenFile(v.Path, os.O_CREATE|os.O_EXCL|os.O_WRONLY|unix.O_NOFOLLOW, 0600)
 		if e != nil {
 			return e
 		}
@@ -484,26 +492,43 @@ func Restore(ctx context.Context, archive, destination string) (string, error) {
 		if e != nil {
 			return e
 		}
-		if e = os.Chmod(p, os.FileMode(v.Mode)); e != nil {
+		if e = root.Chmod(v.Path, os.FileMode(v.Mode)); e != nil {
 			return e
 		}
-		return os.Chtimes(p, v.Modified, v.Modified)
+		return root.Chtimes(v.Path, v.Modified, v.Modified)
 	})
 	if e != nil {
 		return "", e
 	}
 	for _, link := range links {
-		p := filepath.Join(stage, filepath.FromSlash(link.Path))
-		if e = os.MkdirAll(filepath.Dir(p), 0700); e != nil {
+		if e = restoreDirectories(root, path.Dir(link.Path)); e != nil {
 			return "", e
 		}
-		if e = os.Symlink(filepath.FromSlash(link.Link), p); e != nil {
+		if e = root.Symlink(filepath.FromSlash(link.Link), link.Path); e != nil {
 			return "", e
 		}
+	}
+	objects, e := archiveObjects(m.Files)
+	if e != nil {
+		return "", e
+	}
+	resolved := map[string]string{}
+	for _, link := range links {
+		target, err := resolveArchiveLink(ctx, link.Path, objects, resolved)
+		if err != nil {
+			return "", err
+		}
+		if _, err = root.Stat(target); err != nil {
+			return "", errors.New("restored link target is unsafe or unavailable")
+		}
+	}
+	if e = pier.VerifyRegistered(stage, false); e != nil {
+		return "", e
 	}
 	// Publish without replacing any file or directory created since preflight.
 	if e = renameNoReplace(stage, destination); e != nil {
 		return "", e
 	}
+	work.Keep()
 	return destination, nil
 }

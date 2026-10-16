@@ -15,21 +15,23 @@ import (
 )
 
 type Executor struct {
-	store            *store.Store
-	supervisor       *supervisor.Supervisor
-	mu               sync.Mutex
-	ready            bool
-	runMu            sync.Mutex
-	Hooks            map[model.Operation]func(context.Context, *model.Job) error
-	OnChange         func(model.Event)
-	verifyOffline    func(context.Context, model.Ship, model.ID) error
-	resources        func(context.Context, string) (scheduler.Resources, error)
-	readinessTimeout time.Duration
+	store             *store.Store
+	supervisor        *supervisor.Supervisor
+	mu                sync.Mutex
+	ready             bool
+	runMu             sync.Mutex
+	Hooks             map[model.Operation]func(context.Context, *model.Job) error
+	OnChange          func(model.Event)
+	verifyOffline     func(context.Context, model.Ship, model.ID) error
+	copyForInspection func(context.Context, string) (*recoveryCopy, error)
+	resources         func(context.Context, string) (scheduler.Resources, error)
+	readinessTimeout  time.Duration
 }
 
 func New(st *store.Store, s *supervisor.Supervisor) *Executor {
 	e := &Executor{store: st, supervisor: s, Hooks: make(map[model.Operation]func(context.Context, *model.Job) error)}
 	e.verifyOffline = e.inspectOffline
+	e.copyForInspection = newRecoveryCopy
 	e.resources = scheduler.ReadResources
 	e.readinessTimeout = 20 * time.Minute
 	return e

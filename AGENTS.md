@@ -6,8 +6,8 @@ Use this guide to install a development copy, find the relevant code, and debug
 without putting an operator's ships at risk. Read current source when behavior
 differs from documentation; do not treat past validation as fresh evidence.
 
-The first named public alpha is [v0.1.0-alpha.1](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.1).
-Read its [release notes](docs/releases/0.1.0-alpha.1.md) and the current
+The current named public alpha is [v0.1.0-alpha.2](https://github.com/davetist/harbor/releases/tag/v0.1.0-alpha.2).
+Read its [release notes](docs/releases/0.1.0-alpha.2.md) and the current
 [validation limits](docs/validation.md) before choosing a real-ship workflow.
 Earlier `alpha.*` names in validation records are local candidates; GitHub's
 `main.*` prereleases are automated development builds.
@@ -42,7 +42,7 @@ Earlier `alpha.*` names in validation records are local candidates; GitHub's
 2. Prefer the named alpha linked above for this release. Inspect its actual assets;
    do not use GitHub's `/releases/latest` API for a prerelease, guess an asset URL,
    or select an automated `main.*` build merely because it sorts newer.
-   `gh release view v0.1.0-alpha.1 --repo davetist/harbor` is an optional way to
+   `gh release view v0.1.0-alpha.2 --repo davetist/harbor` is an optional way to
    inspect it; `gh` is not an installation prerequisite. Download the matching
    installer and that release's `SHA256SUMS` into a new private folder.
 3. Verify the exact selected file before opening or running it. If downloading
@@ -51,7 +51,7 @@ Earlier `alpha.*` names in validation records are local candidates; GitHub's
 
    ```sh
    # Set this to the exact downloaded filename for this host.
-   harbor_installer=Harbor-0.1.0-alpha.1-macos-universal.dmg
+   harbor_installer=Harbor-0.1.0-alpha.2-macos-universal.dmg
    awk -v artifact="$harbor_installer" '$2 == artifact {print; found=1} END {if (!found) exit 1}' SHA256SUMS > selected-SHA256SUMS
    shasum -a 256 -c selected-SHA256SUMS  # macOS
    # Linux: sha256sum -c selected-SHA256SUMS
@@ -239,7 +239,13 @@ operator action; ordinary installs fall back from port 80 without changing permi
 - **Recovery is durable.** Startup observes and reconciles before admitting work.
   Uncertain launches, interrupted utilities, and failed restarts retain holds.
   Use the supported recovery verification flow after investigating; do not clear
-  database flags or repeatedly restart to hide a failure.
+  database flags or repeatedly restart to hide a failure. An interrupted Stop
+  can be verified against the current pier only with recorded prior-running and
+  stopped intent, no live/uncertain process, and successful offline inspection.
+  Inspection runs on an independent temporary copy of the current log/snapshot;
+  any data or directory mutation rejects it. The original remains locked through
+  hold release, which leaves the ship stopped. Vere `info` can modify its input;
+  never replace this with direct inspection of the held pier.
 - **Shutdown waits.** Preserve PTYs, process tracking, and database access until
   utilities and owned runtimes finish. A canceled request or elapsed timeout does
   not prove a writer stopped. Do not replace graceful shutdown with forced kills.
@@ -258,7 +264,8 @@ operator action; ordinary installs fall back from port 80 without changing permi
   automatic schedules paused; existing schedules retain their saved settings.
 - **LMDB sizing is a mitigation.** Read `docs/lmdb-mapping-workaround.md` before
   catalog, argument, or launch changes. The current catalog pins Vere 4.6. Ship
-  starts and Pack/Meld/Roll/Chop use a power-of-two virtual map of at least 64 GiB
+  starts, Pack/Meld/Roll/Chop and recovery inspection (`info`) use a power-of-two
+  virtual map of at least 64 GiB
   and twice the largest logical LMDB file; epoch sizes are not summed. `play` and
   `prep` do not accept that flag in 4.6. This does not repair corruption or prove
   upstream address ownership; do not retire it just because the version increased.

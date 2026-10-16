@@ -24,6 +24,8 @@ Stop the ship in its previous runner. Copy or move the complete pier, including 
 
 When viewing Harbor remotely, a folder picker browses the Harbor host. A path on your laptop is not a path on a separate server. Local key/archive uploads are the file-transfer paths.
 
+Pier and temporary-work folders need directory ancestry owned by the Harbor user or root and protected from other OS users' writes. Private folders beneath sticky shared temporary directories are supported; the pier and its native storage directories must themselves prevent other users' writes, even when sticky. Harbor refuses replaceable shared ancestry, linked native lock files and escaping or unavailable snapshot targets; choose a private folder instead of bypassing these checks. Safe relative snapshot links contained within the pier remain supported. Harbor retains its private `.harbor-guards-v1` folder beside managed directories for filesystem-equivalent ownership locks; do not delete guard files while a manager or ship is using them.
+
 ## Remove a ship from Harbor
 
 Choose **Manage → Overview → Remove from Harbor** after stopping the ship. The confirmation shows the complete pier path on the Harbor host. Removal unregisters the ship and clears its maintenance settings and Harbor history; its pier, runtime and exported archives stay on disk. Add the pier back later through **Use an existing pier → Existing folder**, confirming its original loom size again.
@@ -38,6 +40,16 @@ If the check fails, Harbor offers **Try Open again**, **Inspect terminal**, and 
 
 Before sending, Harbor checks the listener again and refuses if it responds. It also refuses during boot, stop, maintenance, queued work, recovery holds, shutdown, or uncertain process ownership. **Interrupt sent** confirms only that the input was sent. Wait briefly and choose **Try Open again** to verify that the ship responds. An existing recovery hold still needs its recorded outcome verified through the separate recovery flow.
 
+## After an interrupted Stop
+
+If Harbor stopped before recording a Stop operation's completion, the ship can remain under a recovery hold even after its process has exited. Choose **Verify recorded outcome** on the ship detail page. Harbor checks the current pier without starting the ship or restoring an older archive.
+
+This recovery requires an interrupted Stop that recorded a running ship and persisted stopped intent, no live or uncertain process, no pier writer, and successful offline inspection with the saved runtime. Harbor locks the original against writers and copies its current `.urb/log` and `.urb/chk` into a private temporary folder beside the pier. Vere inspects that copy with adaptive LMDB sizing. Any change to its data or directory structure, including falling back to an older epoch, rejects verification even if Vere exits successfully. LMDB reader-lock bookkeeping is excluded from comparison.
+
+The check needs free space on the filesystem containing that temporary folder for the logical sizes of those event-log and snapshot files plus 64 MiB of headroom; sparse files may occupy their full logical size in the copy. Preparation or inspection failure keeps the hold and the original data. Harbor removes the temporary copy when the check finishes. An interrupted Harbor process may leave a private `.harbor-inspect-*` folder beside the pier; preserve it until its verification process is confirmed stopped. Success clears the hold and leaves the ship stopped; choose **Start ship** separately when ready. Do not clear database flags or delete locks to bypass recovery.
+
+Offline inspection confirms that Vere can load an unchanged copy of the current snapshot and event store; it is not a full replay or a guarantee that every historical event is intact. Interrupted utilities and other operations retain their existing evidence requirements and may still require a separate recovery procedure. This inspection does not apply migrations or checkpoint repairs to the original pier.
+
 ## Loom size
 
 A 2 GiB loom is Urbit's state address-space capacity (`--loom 31`), not a 2 GiB disk allocation or a promise of 2 GiB resident RAM. Harbor currently supports loom exponents 30–32 (1, 2 and 4 GiB). Resident memory, utility working space, snapshots and event logs are separate. A drive adds storage, not RAM. An existing pier's loom must be confirmed accurately; shrinking it is not a migration shortcut.
@@ -47,6 +59,8 @@ A 2 GiB loom is Urbit's state address-space capacity (`--loom 31`), not a 2 GiB 
 Use **Maintenance → Runtime & recovery → Export pier**. Harbor stops the source, produces a full integrity-checked `.tar.gz`, and leaves it intentionally stopped even after a Harbor restart. An export failure after Stop also leaves automatic restart disabled. Scheduled maintenance skips intentionally stopped ships.
 
 Download the final archive and upload it through **Use an existing pier → Upload an archive** on the destination. Harbor validates the manifest, hashes, paths, links and space, restores into a fresh folder, chooses the destination's native runtime, and boots. Ordinary tar archives without a Harbor manifest are unsupported. Existing folders can still be registered directly.
+
+Archive validation and restore have a 30-minute parsing/work deadline, a 64 GiB payload limit, 100,000 files/directories including implicit parent directories, 4,096-byte paths/links, 255-byte components and 128 components per path. Each manifest and retained-path budget is limited to 32 MiB, and decompressed tar metadata (including hidden GNU/PAX records) to 128 MiB. Export enforces the same format limits. Restore reserves space for empty files/directories and checks available inodes when reported by the filesystem. Links must resolve within the archive without traversing a link as an extraction parent; case-aliased link parents are refused. Native lock/control files are verified but recreated after restore.
 
 Keep the source stopped. If it resumes and advances network history, create a fresh final export. Old archives are not safe live-network rollback points; successful integrity checks or fake-ship restores do not prove real-identity continuity. Consult [Urbit migration guidance](https://docs.urbit.org/user-manual/running/cloud-hosting) before moving an identity.
 

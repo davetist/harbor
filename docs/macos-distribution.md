@@ -31,9 +31,14 @@ The builder compiles Intel/Apple Silicon Go runners and AppKit/WebKit shells, co
 The app icon is rendered from the vector mark in `packaging/macos/HarborIcon.swift` at every standard and Retina icon size. The menu bar uses the same mark as a template image, which macOS colors for the current menu-bar appearance. To regenerate `Harbor.icns` after changing the mark:
 
 ```sh
-xcrun swiftc -parse-as-library packaging/macos/HarborIcon.swift packaging/macos/build-icons.swift -o /tmp/harbor-build-icons -framework AppKit
-/tmp/harbor-build-icons /tmp/Harbor.iconset
-iconutil --convert icns --output packaging/macos/Harbor.icns /tmp/Harbor.iconset
+(
+  set -eu
+  harbor_icons_tmp="$(mktemp -d "${TMPDIR:-/tmp}/harbor-icons-XXXXXX")"
+  trap 'rm -rf "$harbor_icons_tmp"' EXIT
+  xcrun swiftc -parse-as-library packaging/macos/HarborIcon.swift packaging/macos/build-icons.swift -o "$harbor_icons_tmp/build-icons" -framework AppKit
+  "$harbor_icons_tmp/build-icons" "$harbor_icons_tmp/Harbor.iconset"
+  iconutil --convert icns --output packaging/macos/Harbor.icns "$harbor_icons_tmp/Harbor.iconset"
+)
 ```
 
 The executable and bundle retain local **ad-hoc signatures** for Apple Silicon execution and integrity checks. These use no signing certificate, Apple account, keychain identity or notarization service, and do not identify Harbor as an Apple-verified download.

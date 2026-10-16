@@ -155,6 +155,52 @@ class PackageTests(unittest.TestCase):
             builder.build("0.1.0", "arm64", self.binary, self.directory)
         self.assertEqual(deb.read_bytes(),original)
 
+    def test_icon_recipe_uses_private_tools_and_stops_after_compile_failure(self):
+        document = (ROOT / 'docs/macos-distribution.md').read_text()
+        recipe = next(block.split('```', 1)[0] for block in document.split('```sh\n')[1:]
+                      if 'HarborIcon.swift' in block.split('```', 1)[0])
+        commands = self.directory / 'commands'
+        commands.mkdir()
+        shared = self.directory / 'shared'
+        shared.mkdir()
+        log = self.directory / 'executed'
+        # Keep even the old, unsafe recipe entirely inside the fixture.
+        recipe = recipe.replace('/tmp/', str(shared) + '/')
+        foreign = shared / 'harbor-build-icons'
+        foreign.write_text('#!/bin/sh\nprintf "foreign\\n" >> "$HARBOR_ICON_LOG"\n')
+        foreign.chmod(0o755)
+        # A compiler fixture refuses output outside a newly created private
+        # directory, and creates an executable only after a successful compile.
+        (commands / 'xcrun').write_text('''#!/usr/bin/env python3
+import os, pathlib, stat, sys
+out = pathlib.Path(sys.argv[sys.argv.index('-o') + 1])
+root = pathlib.Path(os.environ['TMPDIR'])
+if out.parent.parent != root or stat.S_IMODE(out.parent.stat().st_mode) != 0o700:
+    sys.exit(71)
+if os.environ['HARBOR_ICON_FAIL'] == '1':
+    sys.exit(72)
+out.write_text('#!/bin/sh\\nprintf "helper\\\\n" >> "$HARBOR_ICON_LOG"\\nmkdir "$1"\\n')
+out.chmod(0o700)
+''')
+        (commands / 'iconutil').write_text('''#!/bin/sh
+printf 'iconutil\\n' >> "$HARBOR_ICON_LOG"
+test -d "$5"
+''')
+        for command in commands.iterdir():
+            command.chmod(0o755)
+        env = dict(os.environ, TMPDIR=str(shared), HARBOR_ICON_LOG=str(log),
+                   PATH=str(commands) + os.pathsep + os.environ['PATH'])
+        for fail in ('1', '0'):
+            result = subprocess.run(['sh', '-c', recipe], cwd=self.directory,
+                                    env=dict(env, HARBOR_ICON_FAIL=fail), capture_output=True)
+            if fail == '1':
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(log.exists(), 'failed compilation must not run any helper or publisher')
+            else:
+                self.assertEqual(result.returncode, 0, result.stderr.decode())
+                self.assertEqual(log.read_text().splitlines(), ['helper', 'iconutil'])
+            self.assertEqual(list(shared.iterdir()), [foreign], 'recipe must clean only its own private directory')
+
     def test_source_archive_contains_agent_guide_and_desktop_build_inputs(self):
         source = self.directory / "source.tar.gz"
         subprocess.run(["python3",str(ROOT / "scripts/build-source.py"),"0.1.0",str(source)],check=True,stdout=subprocess.DEVNULL)

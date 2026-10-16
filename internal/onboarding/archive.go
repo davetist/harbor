@@ -53,7 +53,9 @@ func (s *Service) executeArchive(ctx context.Context, j *model.Job) error {
 	if e != nil {
 		return e
 	}
-	manifest, e := backup.Validate(ctx, archive)
+	parsing, finishParsing := context.WithTimeout(ctx, backup.ArchiveTimeout)
+	defer finishParsing()
+	manifest, e := backup.Validate(parsing, archive)
 	if e != nil {
 		return e
 	}
@@ -68,7 +70,7 @@ func (s *Service) executeArchive(ctx context.Context, j *model.Job) error {
 	if e != nil {
 		return e
 	}
-	if _, e = backup.Restore(ctx, archive, ship.PierPath); e != nil {
+	if _, e = backup.Restore(parsing, archive, ship.PierPath); e != nil {
 		return e
 	}
 	if _, e = pier.Inspect(ship.PierPath); e != nil {
