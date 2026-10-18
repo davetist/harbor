@@ -20,9 +20,18 @@ func TestReadinessRetryPreservesConcurrentState(t *testing.T) {
 			if err := s.store.PutShip(context.Background(), ship); err != nil {
 				t.Fatal(err)
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-			err := s.LaunchNewShip(ctx, "first", ship, []string{"--http-port", fmt.Sprint(ship.WebPort), ship.PierPath})
+			ctx, cancel := context.WithCancel(context.Background())
+			started := make(chan error, 1)
+			launchDone := make(chan struct{})
+			defer func() { cancel(); <-launchDone }()
+			go func() {
+				defer close(launchDone)
+				started <- s.LaunchNewShip(ctx, "first", ship, []string{"--http-port", fmt.Sprint(ship.WebPort), ship.PierPath})
+			}()
+			// Start the helper before canceling readiness; launch time varies by host.
+			waitBootstrapHelper(t, ship.PierPath)
 			cancel()
+			err := <-started
 			if err == nil {
 				t.Fatal("unready helper was accepted")
 			}
@@ -146,9 +155,17 @@ func TestReadinessRetryRejectsChangedOwnershipAtAdmission(t *testing.T) {
 	for _, change := range []string{"process", "binary", "configuration", "hold", "cancel", "strict-launch"} {
 		t.Run(change, func(t *testing.T) {
 			s, ship := bootstrapSupervisor(t)
-			ctx, cancel := context.WithTimeout(context.Background(), 400*time.Millisecond)
-			err := s.LaunchNewShip(ctx, "first", ship, []string{"--http-port", fmt.Sprint(ship.WebPort), ship.PierPath})
+			ctx, cancel := context.WithCancel(context.Background())
+			started := make(chan error, 1)
+			launchDone := make(chan struct{})
+			defer func() { cancel(); <-launchDone }()
+			go func() {
+				defer close(launchDone)
+				started <- s.LaunchNewShip(ctx, "first", ship, []string{"--http-port", fmt.Sprint(ship.WebPort), ship.PierPath})
+			}()
+			waitBootstrapHelper(t, ship.PierPath)
 			cancel()
+			err := <-started
 			if err == nil {
 				t.Fatal("unready helper was accepted")
 			}
