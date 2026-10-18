@@ -53,3 +53,32 @@ func TestContainsPathRecognizesFilesystemAliases(t *testing.T) {
 		}
 	}
 }
+
+func TestRemovalChecksInaccessibleMountsFromTheirAccessibleAncestors(t *testing.T) {
+	parent, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	pier := filepath.Join(parent, "pier")
+	if err = os.Mkdir(pier, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, nested := range []bool{false, true} {
+		root := parent
+		if nested {
+			root = pier
+		}
+		private := filepath.Join(root, "root-only")
+		if err = os.MkdirAll(filepath.Join(private, "mount"), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err = os.Chmod(private, 0); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { os.Chmod(private, 0700) })
+		err = refuseMountsWithin(pier, []string{filepath.Join(private, "mount")})
+		if (err != nil) != nested {
+			t.Fatalf("nested=%v: %v", nested, err)
+		}
+	}
+}

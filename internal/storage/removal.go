@@ -67,12 +67,21 @@ func RefuseMountsWithin(path string) error {
 
 func refuseMountsWithin(path string, points []string) error {
 	for _, point := range points {
-		inside, err := ContainsPath(path, point)
-		if err != nil {
-			return err
-		}
-		if inside {
-			return errors.New("pier contains a mount point; unmount it before deleting pier files")
+		for at := point; ; at = filepath.Dir(at) {
+			inside, err := ContainsPath(path, at)
+			if os.IsPermission(err) && filepath.Dir(at) != at {
+				// Kernel mount paths can include another user's private tree.
+				// Its accessible ancestors still establish whether it descends
+				// from this pier, including filesystem aliases of the pier name.
+				continue
+			}
+			if err != nil {
+				return err
+			}
+			if inside {
+				return errors.New("pier contains a mount point; unmount it before deleting pier files")
+			}
+			break
 		}
 	}
 	return nil

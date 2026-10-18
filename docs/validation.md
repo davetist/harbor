@@ -27,6 +27,15 @@ Desktop and 320-pixel deletion dialogs were inspected and accessibility checks
 passed. Linux amd64 and arm64 cross-builds passed; these are not native Linux
 deletion evidence.
 
+Targeted deletion, removal, path-overlap and retry checks also passed natively
+on Raspberry Pi ARM64 in private disposable fixtures: 57 passing test/subtest
+results across storage, pier, store, jobs and server. This caught and corrected
+a refusal caused by an unrelated mount behind an inaccessible parent directory.
+Mount checks now establish ancestry from accessible parents while still refusing
+mounts inside the pier, including physical path aliases. The complete macOS Go
+race suite and vet passed again after that correction. These fixture checks do
+not establish a real-comet deletion through the Linux production UI.
+
 A supplemental native macOS ARM64 trial used an exclusively copied, previously
 stopped disposable comet in a new isolated registry. Pack, Roll, Chop, export and
 replay completed. The embedded production UI then preserved its pier on default
@@ -38,7 +47,7 @@ bootstrap-pill download; a bounded independent download probe also timed out.
 That stalled disposable boot was canceled, its process was recorded Exited and
 the manager exited zero; failed-trial state was retained for diagnosis.
 This supplemental run does not establish fresh onboarding, physical-failure
-behavior, native Linux deletion or installation on an operator's host.
+behavior, real-comet Linux deletion or installation on an operator's host.
 
 ## Readiness retry recovery and verification feedback — 2026-10-18
 
