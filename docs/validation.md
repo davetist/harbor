@@ -9,6 +9,86 @@ Release evidence was reviewed on 2026-10-13 for the first named public alpha; la
 | macOS x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 | Linux x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 
+## Readiness retry recovery and verification feedback — 2026-10-18
+
+The `0.1.0-alpha.2.start-recovery.2` candidate handles an interrupted readiness
+retry whose original ship launch belongs to an earlier failed Start. Recovery
+follows only consecutive readiness timeouts and still requires one closed ship
+launch with a recorded PID, process identity and binary digest. It refuses other
+operations, different failures, missing or uncertain identities and multiple
+launches. Existing writer guards and unchanged-copy inspection remain required.
+
+The verification button now reports progress, blocks duplicate clicks and
+refreshes the ship after success even without an event notification. Both the
+recovery and browser regressions reproduced their failures before the change.
+The final serial Go race suite, vet, production build, frontend typecheck and
+four unit tests, nine native-harness contracts, eight package contracts, module
+download and third-party notices passed. Browser validation passed 69 cases,
+including desktop/mobile progress, accessibility, success and refusal; six
+unrelated opt-in native filesystem, release and interruption cases stayed gated.
+
+Targeted recovery and copy-integrity checks passed natively on Raspberry Pi
+ARM64 in private disposable fixtures, with 60 passing test/subtest results. The
+staged Debian installer SHA-256 is
+`5401ce53d04c2704011bf56607bf5e3e9154e355a99d163f802e55016ea5801a`.
+The operator installed that Debian package, and the running service reported
+the candidate version with a runner checksum matching the built artifact. The
+existing planet and comet resumed automatically after the graceful upgrade.
+The moon's real recovery button displayed its disabled progress state, returned
+HTTP 204 and enabled Start ship after the original pier passed inspection. Its
+recorded verification exited zero, and the subsequent Start completed with a
+responsive HTTP listener. All three ships were running without recovery holds;
+the registry's SQLite quick check passed.
+
+The existing Hermes watcher picked up the moon's newly assigned HTTP port and
+reconnected its Tlon adapter. Its profile remained bind-mounted from the moon's
+pier. A fresh authenticated Tlon HTTPS session on the planet confirmed the ship
+identity and loaded the app and its JavaScript asset. The Pi retained the same
+boot throughout recovery, upgrade and startup, with no new undervoltage events
+observed. This is a successful operator recovery, not a long-term hardware
+stability test or a verification of every Hermes integration.
+
+A source follow-up also prioritizes the current recovery hold over stale startup
+guidance that directs the operator to the disabled Start button. Its browser
+regression reproduced the misleading message before the correction, then passed
+alongside the existing success/refusal checks. Desktop and 320-pixel captures
+were inspected. The production build, serial Go race suite, vet, frontend
+typecheck, four unit tests, 69 browser cases and both contract suites passed
+again before committing; the same six unrelated native browser cases remained
+gated. This message-priority follow-up is not part of the installed candidate
+whose checksum appears above.
+
+## Interrupted Start recovery candidate — 2026-10-17
+
+The `0.1.0-alpha.2.start-recovery.1` candidate extends recorded-outcome
+verification to interrupted starts of existing ships. The regression reproduced
+the refusal before the change. The serial Go race suite, vet, embedded production
+build, frontend typecheck and tests, dependency notices, and package-contract
+checks passed on macOS ARM64.
+
+Targeted Start/Stop recovery, inspection, and copy-integrity tests also passed
+natively on Raspberry Pi Linux ARM64 using disposable fixtures and helper
+processes. Those fixtures require an owner-only umask; the Pi's group-writable
+default was correctly refused by the storage checks. The ARM64 Debian installer
+SHA-256 is `5adca4e0aa2782c7b8a4f7213104d58091a14bd82b6ec9e9a95dafdf2aca98ec`.
+These tests do not establish successful real-pier recovery or identify the cause
+of a host reboot. Operator installation and live recovery remain separate checks.
+
+In a subsequent authorized operator recovery on the Pi, all three held piers
+passed the actual Vere inspection and unchanged-copy checks. Their holds cleared
+to Stopped. The first ship then reached Running and served its login page. The
+host rebooted during startup of the second ship, confirmed by a changed Linux
+boot ID; the third start was not requested. The kernel stream captured no error
+before disconnecting. Complete startup acceptance and the host-reset cause
+remain unresolved; the offline verification result does not establish either.
+
+After another host reboot, the kernel recorded undervoltage followed by voltage
+normalisation, and `vcgencmd get_throttled` reported `0x50000` (undervoltage and
+throttling had occurred). Harbor was then stopped gracefully; its service exited
+successfully and no Vere processes remained. This establishes a power-delivery
+fault during that boot, not the cause of every reset. Further ship starts were
+paused for investigation of the power supply and attached storage.
+
 ## Security fix candidate — 2026-10-16
 
 The source candidate for alpha 2 addresses all 14 findings from the deep security

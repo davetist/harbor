@@ -44,6 +44,7 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	}
 	var latest *model.Job
 	var records []model.ProcessRecord
+	latestIndex := -1
 	for i := range jobs {
 		if jobs[i].Phase == "interrupted" || jobs[i].Phase == "failed" {
 			records, err = e.store.ProcessesForJob(ctx, jobs[i].ID)
@@ -56,6 +57,7 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 				continue
 			}
 			latest = &jobs[i]
+			latestIndex = i
 			break
 		}
 	}
@@ -64,6 +66,35 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	}
 	confirmed := false
 	switch latest.Kind {
+	case "start":
+		// A host restart may interrupt readiness after a registered ship was
+		// launched. Require a conclusively closed launch below, then inspect
+		// the current storage without booting or replacing it from an archive.
+		if latest.Phase != "interrupted" || !ship.DesiredRunning {
+			return errors.New("the interrupted Start did not retain running intent; hold remains")
+		}
+		if onlyVerificationRecords(records) {
+			// A readiness retry reuses an owned process. Follow only the
+			// consecutive failed readiness checks to its original launch.
+			for _, previous := range jobs[latestIndex+1:] {
+				if previous.Kind != "start" || previous.Phase != "failed" || previous.Error != "ship readiness timed out; process remains tracked" {
+					break
+				}
+				prior, lookup := e.store.ProcessesForJob(ctx, previous.ID)
+				if lookup != nil {
+					return lookup
+				}
+				if onlyVerificationRecords(prior) {
+					continue
+				}
+				launch, valid := singleClosedStartLaunch(prior)
+				if !valid {
+					return errors.New("the earlier readiness launch was not conclusively closed; hold remains")
+				}
+				records = []model.ProcessRecord{launch}
+				break
+			}
+		}
 	case "stop":
 		// Stop does not run an offline utility. PriorRunning is recorded only
 		// after admission checks; saved stopped intent proves Stop progressed
@@ -79,6 +110,13 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	}
 	for _, p := range records {
 		if p.Operation == "verify" {
+			continue
+		}
+		if latest.Kind == "start" {
+			if p.Kind != "ship" || p.Operation != "start" || p.Phase != "exited" || p.PID <= 1 || p.StartIdentity == "" || p.BinaryDigest == "" || confirmed {
+				return errors.New("a single closed ship launch was not conclusively recorded; hold remains")
+			}
+			confirmed = true
 			continue
 		}
 		if latest.Kind == "stop" {
@@ -98,7 +136,7 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 		confirmed = true
 	}
 	if !confirmed {
-		return errors.New("missing utility outcome; hold remains")
+		return errors.New("missing process outcome; hold remains")
 	}
 	release, err := pier.Guard(ship.PierPath)
 	if err != nil {
@@ -124,6 +162,31 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	e.emit(model.Event{Type: "ship", ShipID: ship.ID, Data: ship})
 	return nil
 }
+
+func onlyVerificationRecords(records []model.ProcessRecord) bool {
+	for _, process := range records {
+		if process.Operation != "verify" {
+			return false
+		}
+	}
+	return true
+}
+
+func singleClosedStartLaunch(records []model.ProcessRecord) (model.ProcessRecord, bool) {
+	var launch model.ProcessRecord
+	found := false
+	for _, process := range records {
+		if process.Operation == "verify" {
+			continue
+		}
+		if found || process.Kind != "ship" || process.Operation != "start" || process.Phase != "exited" || process.PID <= 1 || process.StartIdentity == "" || process.BinaryDigest == "" {
+			return model.ProcessRecord{}, false
+		}
+		launch, found = process, true
+	}
+	return launch, found
+}
+
 func (e *Executor) inspectOffline(ctx context.Context, ship model.Ship, job model.ID) error {
 	// VerifyAndReleaseHold keeps both source locks through the final store write.
 	if err := e.supervisor.ValidatePier(ship, false); err != nil {

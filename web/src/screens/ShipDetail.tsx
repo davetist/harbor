@@ -8,7 +8,7 @@ import { RemoveShip } from './RemoveShip'
 import { APIError } from '../api/client'
 import { InterruptConfirmation } from './InterruptConfirmation'
 const Terminal = lazy(() => import('./Terminal').then(module => ({ default: module.Terminal })))
-export function ShipDetail({ ship, host, client, tab, selectTab, back, run, busy, removed, measured, initialOpenFailure = '' }: { ship: Ship; host: Host; client: HarborClient; tab: string; selectTab: (tab: string) => void; back: () => void; run: (op: Operation) => void; busy: boolean; removed: () => void; measured: (ship: Ship) => void; initialOpenFailure?: string }) {
+export function ShipDetail({ ship, host, client, tab, selectTab, back, run, busy, removed, measured, verified, initialOpenFailure = '' }: { ship: Ship; host: Host; client: HarborClient; tab: string; selectTab: (tab: string) => void; back: () => void; run: (op: Operation) => void; busy: boolean; removed: () => void; measured: (ship: Ship) => void; verified: (ship: Ship) => void; initialOpenFailure?: string }) {
   const [enabledSchedules, setEnabledSchedules] = useState<number>();
   useEffect(() => { let active = true; const refresh = () => { client.schedules(ship.id).then(rows => { if (active) setEnabledSchedules(rows.filter(row => row.enabled).length) }).catch(() => { if (active) setEnabledSchedules(undefined) }) }; refresh(); const unsubscribe = client.subscribe?.(refresh); return () => { active = false; unsubscribe?.() } }, [client, ship.id, busy]);
   const [code, setCode] = useState('');
@@ -19,6 +19,14 @@ export function ShipDetail({ ship, host, client, tab, selectTab, back, run, busy
   async function copyCode() { setError(''); setCopied(false); try { await copyText(code); setCopied(true) } catch { setError('Clipboard unavailable. Select and copy the code manually.') } }
   const [measuring, setMeasuring] = useState(false)
   async function refreshPierSize() { if (measuring) return; setMeasuring(true); setError(''); try { measured(await client.measurePier(ship.id)) } catch (e) { setError(e instanceof Error ? e.message : 'Unable to measure this pier. Try again.') } finally { setMeasuring(false) } }
+  const [verifying, setVerifying] = useState(false)
+  async function verifyRecovery() {
+    if (verifying || busy) return
+    setVerifying(true); setError('')
+    try { await client.verifyRecovery(ship.id); verified(await client.ship(ship.id)) }
+    catch (e) { setError(e instanceof Error ? e.message : 'The recovery hold remains.') }
+    finally { setVerifying(false) }
+  }
   const [opening, setOpening] = useState(false)
   const [unresponsive, setUnresponsive] = useState(initialOpenFailure)
   const [confirmingInterrupt, setConfirmingInterrupt] = useState(false)
@@ -37,7 +45,8 @@ export function ShipDetail({ ship, host, client, tab, selectTab, back, run, busy
       const next = event.key === 'ArrowRight' ? (current + 1) % 3 : event.key === 'ArrowLeft' ? (current + 2) % 3 : event.key === 'Home' ? 0 : event.key === 'End' ? 2 : -1
       if (next < 0) return; event.preventDefault(); (event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next])?.focus(); selectTab(names[next])
     }} onClick={() => selectTab(name.toLowerCase())}>{name}</button>)}</nav>
-    <ErrorMessage message={error || ship.error || ship.recoveryBlockReason}/>{ship.recoveryBlocked && <button className="recovery-verify" onClick={async () => { try { await client.verifyRecovery(ship.id); setError('') } catch (e) { setError(e instanceof Error ? e.message : 'The recovery hold remains.') } }}>Verify recorded outcome →</button>}
+    <ErrorMessage message={error || (ship.recoveryBlocked && ship.recoveryBlockReason) || ship.error}/>{ship.recoveryBlocked && <button className="recovery-verify" disabled={verifying || busy} aria-busy={verifying} onClick={() => void verifyRecovery()}>{verifying ? 'Verifying…' : 'Verify recorded outcome →'}</button>}
+    {verifying && <p className="web-status" role="status">Verification in progress. This may take several minutes.</p>}
     {unresponsive && <aside className="web-recovery" aria-label="Ship web recovery"><p role="alert">{unresponsive}</p><div className="recovery-actions"><button disabled={opening || ship.state !== 'running'} onClick={() => void openShip()}>Try Open again</button><button disabled={busy || ship.recoveryBlocked || ship.state !== 'running' || opening} onClick={() => setConfirmingInterrupt(true)}>Interrupt current event…</button><button className="text-button" onClick={() => selectTab('terminal')}>Inspect terminal →</button></div></aside>}
     {webStatus && <p className="web-status" role="status">{webStatus}</p>}
     {confirmingInterrupt && <InterruptConfirmation ship={ship} client={client} busy={busy} cancel={() => setConfirmingInterrupt(false)} sent={() => { setConfirmingInterrupt(false); setWebStatus('Interrupt sent. Wait a moment, then try Open again to check the response.') }} responsive={() => { setConfirmingInterrupt(false); setUnresponsive(''); setWebStatus('The ship is responding again. Try Open ship.') }}/>}
