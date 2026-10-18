@@ -21,6 +21,22 @@ type linuxMount struct {
 	Minor      uint32
 }
 
+func mountPoints() ([]string, error) {
+	b, err := os.ReadFile("/proc/self/mountinfo")
+	if err != nil {
+		return nil, err
+	}
+	mounts, err := parseMountInfo(b)
+	if err != nil {
+		return nil, err
+	}
+	points := make([]string, 0, len(mounts))
+	for _, mount := range mounts {
+		points = append(points, mount.MountPoint)
+	}
+	return points, nil
+}
+
 func parseMountInfo(b []byte) ([]linuxMount, error) {
 	var mounts []linuxMount
 	s := bufio.NewScanner(strings.NewReader(string(b)))

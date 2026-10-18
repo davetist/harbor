@@ -18,23 +18,24 @@ func NewID() ID {
 
 type Operation string
 type Ship struct {
-	Identity            string    `json:"identity,omitempty"`
-	PierBytes           *int64    `json:"pierBytes,omitempty"`
-	MeasuredAt          time.Time `json:"measuredAt,omitempty"`
-	RuntimeVersion      string    `json:"runtimeVersion,omitempty"`
-	ID                  ID        `json:"id"`
-	Name                string    `json:"name"`
-	Nickname            string    `json:"nickname"`
-	PierPath            string    `json:"pierPath"`
-	RuntimePath         string    `json:"runtimePath"`
-	LoomExponent        int       `json:"loomExponent"`
-	HTTPBindAddress     string    `json:"httpBindAddress"`
-	WebPort             int       `json:"webPort"`
-	DesiredRunning      bool      `json:"desiredRunning"`
-	RecoveryBlocked     bool      `json:"recoveryBlocked"`
-	RecoveryBlockReason string    `json:"recoveryBlockReason"`
-	State               string    `json:"state"`
-	Error               string    `json:"error"`
+	Identity             string    `json:"identity,omitempty"`
+	PierBytes            *int64    `json:"pierBytes,omitempty"`
+	MeasuredAt           time.Time `json:"measuredAt,omitempty"`
+	RuntimeVersion       string    `json:"runtimeVersion,omitempty"`
+	ID                   ID        `json:"id"`
+	Name                 string    `json:"name"`
+	Nickname             string    `json:"nickname"`
+	PierPath             string    `json:"pierPath"`
+	PierDeletionIdentity string    `json:"pierDeletionIdentity,omitempty"`
+	RuntimePath          string    `json:"runtimePath"`
+	LoomExponent         int       `json:"loomExponent"`
+	HTTPBindAddress      string    `json:"httpBindAddress"`
+	WebPort              int       `json:"webPort"`
+	DesiredRunning       bool      `json:"desiredRunning"`
+	RecoveryBlocked      bool      `json:"recoveryBlocked"`
+	RecoveryBlockReason  string    `json:"recoveryBlockReason"`
+	State                string    `json:"state"`
+	Error                string    `json:"error"`
 }
 type Job struct {
 	Retryable      bool      `json:"retryable,omitempty"`

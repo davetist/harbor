@@ -25,7 +25,7 @@ export class APIClient implements HarborClient {
   listShips() { return this.request<Ship[]>('/ships') }
   ship(id: string) { return this.request<Ship>(`/ships/${id}`) }
   measurePier(id: string) { return this.request<Ship>(`/ships/${id}/measure`, 'POST', {}) }
-  removeShip(id: string) { return this.request<void>(`/ships/${id}`, 'DELETE') }
+  removeShip(id: string, options?: { deletePier: boolean; confirmPierPath: string }) { return this.request<void>(`/ships/${id}`, 'DELETE', options) }
   async boot(request: BootRequest, file?: File) {
     if (file) { const data = new FormData(); data.append('file', file); const upload = await this.request<{uploadId: string}>(`/uploads/${request.importArchive ? 'archive' : 'keyfile'}`, 'POST', data); request = { ...request, uploadId: upload.uploadId } }
     try { return (await this.request<{ jobId: string }>(`/onboarding/${request.mode}`, 'POST', request)).jobId } catch (error) { if (request.uploadId && !request.importArchive) await this.request(`/uploads/${request.uploadId}`, 'DELETE').catch(() => undefined); throw error }

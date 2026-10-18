@@ -16,6 +16,9 @@ func (s *Store) QueuePendingImport(ctx context.Context, ship model.Ship, j model
 		return e
 	}
 	defer tx.Rollback()
+	if e = rejectDeletingOverlap(ctx, tx, ship.PierPath); e != nil {
+		return e
+	}
 	b, e := json.Marshal(ship)
 	if e != nil {
 		return e

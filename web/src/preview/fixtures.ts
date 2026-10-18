@@ -22,9 +22,11 @@ export class PreviewClient implements HarborClient {
   async listShips() { return structuredClone(this.data.ships) }
   async ship(id: string) { const ship = this.data.ships.find(s => s.id === id); if (!ship) throw new Error('Ship not found.'); return structuredClone(ship) }
   async measurePier(id: string) { const ship = this.data.ships.find(s => s.id === id); if (!ship) throw new Error('Ship not found.'); ship.measuredAt = new Date().toISOString(); this.save(); return structuredClone(ship) }
-  async removeShip(id: string) {
+  async removeShip(id: string, options?: { deletePier: boolean; confirmPierPath: string }) {
     const ship = await this.ship(id)
-    if (ship.recoveryBlocked) throw new Error("Resolve this ship's recovery hold before removing it from Harbor.")
+    if (ship.recoveryBlocked && !ship.pierDeletionIdentity) throw new Error("Resolve this ship's recovery hold before removing it from Harbor.")
+    if (ship.pierDeletionIdentity && !options?.deletePier) throw new Error('Confirm permanent deletion again to finish removal.')
+    if (options?.deletePier && options.confirmPierPath !== ship.pierPath) throw new Error('Confirm the exact registered pier path.')
     if (ship.desiredRunning || !['stopped', 'failed'].includes(ship.state)) throw new Error('Stop this ship before removing it from Harbor.')
     if (this.data.jobs.some(job => job.shipId === id && !['completed', 'failed', 'skipped', 'interrupted'].includes(job.phase))) throw new Error('This ship has active or queued work. Wait for it to finish before removing it.')
     this.data.ships = this.data.ships.filter(ship => ship.id !== id)

@@ -28,7 +28,11 @@ Pier and temporary-work folders need directory ancestry owned by the Harbor user
 
 ## Remove a ship from Harbor
 
-Choose **Manage → Overview → Remove from Harbor** after stopping the ship. The confirmation shows the complete pier path on the Harbor host. Removal unregisters the ship and clears its maintenance settings and Harbor history; its pier, runtime and exported archives stay on disk. Add the pier back later through **Use an existing pier → Existing folder**, confirming its original loom size again.
+Choose **Manage → Overview → Remove from Harbor** after stopping the ship. The confirmation shows the complete pier path on the Harbor host. By default, removal unregisters the ship and clears its maintenance settings and Harbor history; its pier, runtime and exported archives stay on disk. Add the preserved pier back later through **Use an existing pier → Existing folder**, confirming its original loom size again.
+
+To also erase the pier, select **Permanently delete pier files**, review the path and irreversible-deletion warning, then confirm **Remove and delete pier**. This deletes the entire pier folder, including any mounted desk files inside it. Exported archives and shared runtimes remain on disk. Harbor refuses deletion while the ship has work, a recovery hold or another writer, or if the folder contains a mount point, another registered pier, Harbor storage, a runtime or a tracked export. Stop the ship first and move protected contents out before retrying.
+
+Deletion records a durable hold before changing files. If storage fails or Harbor stops during deletion, the ship stays registered and cannot start; its automatic schedules stay paused. Resolve storage access, reopen removal and explicitly confirm permanent deletion again to finish. Harbor checks the original folder identity before retrying and preserves a replacement folder at the same path.
 
 Active or queued jobs, tracked live processes and unresolved recovery holds prevent removal. Wait for work to finish or resolve the hold first. Removal does not free disk space or delete a ship's identity.
 

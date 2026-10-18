@@ -9,6 +9,37 @@ Release evidence was reviewed on 2026-10-13 for the first named public alpha; la
 | macOS x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 | Linux x86_64 | Hosted native Go checks and the 2026-10-13 fresh-comet boot/login, stop/start, Pack/Roll/Chop, export/restore/replay and graceful shutdown trial. | Native installer execution, Meld, valid disposable keys, real identities and broader workload/failure acceptance. |
 
+## Permanent pier removal — 2026-10-18
+
+The local source candidate adds an unchecked **Permanently delete pier files**
+option to removal, with the exact path, an irreversible warning and a separate
+**Remove and delete pier** confirmation. Normal removal still preserves files.
+Deletion holds both writer guards, refuses protected or overlapping storage and
+mount points, and persists a deletion hold before changing files. Interrupted
+deletion requires explicit confirmation to retry against the same folder identity;
+starts, recovery verification, maintenance and overlapping registrations remain
+blocked until removal finishes.
+
+The macOS ARM64 production build, complete serial Go race suite and vet,
+frontend typecheck/four unit tests, 72 browser fixture checks, nine native-harness
+contracts, eight package contracts, module download and dependency notices passed.
+Desktop and 320-pixel deletion dialogs were inspected and accessibility checks
+passed. Linux amd64 and arm64 cross-builds passed; these are not native Linux
+deletion evidence.
+
+A supplemental native macOS ARM64 trial used an exclusively copied, previously
+stopped disposable comet in a new isolated registry. Pack, Roll, Chop, export and
+replay completed. The embedded production UI then preserved its pier on default
+removal, re-registered it, canceled permanent deletion without changing files,
+and confirmed actual deletion. Runtime files and the hashes of all tracked
+exports were preserved; the registry ended empty and its manager exited zero.
+The separate fresh-comet lifecycle attempt could not finish its official
+bootstrap-pill download; a bounded independent download probe also timed out.
+That stalled disposable boot was canceled, its process was recorded Exited and
+the manager exited zero; failed-trial state was retained for diagnosis.
+This supplemental run does not establish fresh onboarding, physical-failure
+behavior, native Linux deletion or installation on an operator's host.
+
 ## Readiness retry recovery and verification feedback — 2026-10-18
 
 The `0.1.0-alpha.2.start-recovery.2` candidate handles an interrupted readiness

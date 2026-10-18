@@ -64,7 +64,12 @@ func (s *Store) PutShip(ctx context.Context, v model.Ship) error {
 		return errors.New("ship ID and pier path required")
 	}
 	v.PierPath = filepath.Clean(v.PierPath)
-	existing, lookup := s.GetShip(ctx, v.ID)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	existing, lookup := decodeRow[model.Ship](tx.QueryRowContext(ctx, "SELECT payload FROM ships WHERE id=?", v.ID))
 	if lookup == nil {
 		if existing.PierPath != v.PierPath {
 			return errors.New("registered pier path cannot change")
@@ -74,12 +79,20 @@ func (s *Store) PutShip(ctx context.Context, v model.Ship) error {
 	} else if real, err := filepath.EvalSymlinks(v.PierPath); err == nil {
 		v.PierPath = real
 	}
+	if errors.Is(lookup, ErrNotFound) {
+		if err = rejectDeletingOverlap(ctx, tx, v.PierPath); err != nil {
+			return err
+		}
+	}
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	_, err = s.db.ExecContext(ctx, "INSERT INTO ships(id,pier_path,payload) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE ships.pier_path=excluded.pier_path", v.ID, v.PierPath, string(b))
-	return err
+	_, err = tx.ExecContext(ctx, "INSERT INTO ships(id,pier_path,payload) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload WHERE ships.pier_path=excluded.pier_path", v.ID, v.PierPath, string(b))
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // An interrupted outcome and its hold must survive the same commit, including
@@ -313,6 +326,9 @@ func (s *Store) RegisterQueued(ctx context.Context, ship model.Ship, j model.Job
 		return e
 	}
 	defer tx.Rollback()
+	if e = rejectDeletingOverlap(ctx, tx, ship.PierPath); e != nil {
+		return e
+	}
 	b, e := json.Marshal(ship)
 	if e != nil {
 		return e

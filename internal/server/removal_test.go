@@ -2,16 +2,135 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"harbor/internal/jobs"
 	"harbor/internal/model"
+	"harbor/internal/pier"
 	"harbor/internal/store"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestRemoveShipCanPermanentlyDeleteConfirmedPier(t *testing.T) {
+	h, ship := removalHandler(t)
+	archive := filepath.Join(t.TempDir(), "export.tar.gz")
+	if err := os.WriteFile(archive, []byte("keep export"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.store.PutBackup(context.Background(), model.Backup{ID: "export", ShipID: ship.ID, ArchivePath: archive, CreatedAt: time.Now(), Verified: true}); err != nil {
+		t.Fatal(err)
+	}
+	body, _ := json.Marshal(map[string]any{"deletePier": true, "confirmPierPath": ship.PierPath})
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("DELETE", "http://127.0.0.1:8789/api/v1/ships/test-comet", strings.NewReader(string(body))))
+	if w.Code != 204 {
+		t.Fatalf("remove: %d %s", w.Code, w.Body.String())
+	}
+	if _, err := os.Lstat(ship.PierPath); !os.IsNotExist(err) {
+		t.Fatalf("confirmed pier was not deleted: %v", err)
+	}
+	if b, err := os.ReadFile(archive); err != nil || string(b) != "keep export" {
+		t.Fatalf("export changed: %v", err)
+	}
+}
+
+func TestPermanentRemovalRequiresExactPathConfirmation(t *testing.T) {
+	for _, body := range []string{`{"deletePier":true}`, `{"deletePier":true,"confirmPierPath":"/wrong/pier"}`, `{"deletePier":"yes"}`, `{"deletePier":true,"unknown":true}`, `{} {}`} {
+		t.Run(body, func(t *testing.T) {
+			h, ship := removalHandler(t)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest("DELETE", "http://127.0.0.1:8789/api/v1/ships/test-comet", strings.NewReader(body)))
+			if w.Code != 400 {
+				t.Fatalf("invalid confirmation accepted: %d %s", w.Code, w.Body.String())
+			}
+			if _, err := h.store.GetShip(context.Background(), ship.ID); err != nil {
+				t.Fatalf("registration changed: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(ship.PierPath, "pier-data")); err != nil {
+				t.Fatalf("pier changed: %v", err)
+			}
+		})
+	}
+}
+
+func TestPermanentRemovalPreservesProtectedFoldersAndBusyPiers(t *testing.T) {
+	for _, scenario := range []string{"guard", "recovery", "running", "job", "process", "nested-pier", "parent-pier", "export", "harbor-data", "aliased-data", "aliased-pier"} {
+		t.Run(scenario, func(t *testing.T) {
+			ctx := context.Background()
+			h, ship := removalHandler(t)
+			switch scenario {
+			case "guard":
+				release, err := pier.Guard(ship.PierPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer release()
+			case "recovery":
+				ship.RecoveryBlocked = true
+			case "running":
+				ship.State = "running"
+				ship.DesiredRunning = true
+			case "job":
+				if err := h.store.CreateJob(ctx, model.Job{ID: "queued", ShipID: ship.ID, Kind: "start", Trigger: "manual", Phase: "queued"}); err != nil {
+					t.Fatal(err)
+				}
+			case "process":
+				if err := h.store.PutProcess(ctx, model.ProcessRecord{LaunchID: "uncertain", ShipID: ship.ID, Phase: "launching"}); err != nil {
+					t.Fatal(err)
+				}
+			case "nested-pier", "parent-pier":
+				otherPath := filepath.Join(ship.PierPath, "nested")
+				if scenario == "parent-pier" {
+					otherPath = filepath.Dir(ship.PierPath)
+				}
+				if err := h.store.PutShip(ctx, model.Ship{ID: "other", PierPath: otherPath, State: "running"}); err != nil {
+					t.Fatal(err)
+				}
+			case "export":
+				if err := h.store.PutBackup(ctx, model.Backup{ID: "inside", ShipID: ship.ID, ArchivePath: filepath.Join(ship.PierPath, "archive.tar.gz"), CreatedAt: time.Now()}); err != nil {
+					t.Fatal(err)
+				}
+			case "harbor-data":
+				h.cfg.DataDir = filepath.Join(ship.PierPath, "data")
+			case "aliased-data", "aliased-pier":
+				alias := filepath.Join(t.TempDir(), "alias")
+				if err := os.Symlink(ship.PierPath, alias); err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "aliased-data" {
+					h.cfg.DataDir = alias
+				} else {
+					if err := os.Mkdir(filepath.Join(ship.PierPath, "nested"), 0700); err != nil {
+						t.Fatal(err)
+					}
+					if err := h.store.PutShip(ctx, model.Ship{ID: "other", PierPath: filepath.Join(alias, "nested"), State: "running"}); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			if err := h.store.PutShip(ctx, ship); err != nil {
+				t.Fatal(err)
+			}
+			body, _ := json.Marshal(map[string]any{"deletePier": true, "confirmPierPath": ship.PierPath})
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, httptest.NewRequest("DELETE", "http://127.0.0.1:8789/api/v1/ships/test-comet", strings.NewReader(string(body))))
+			if w.Code != 409 {
+				t.Fatalf("unsafe removal accepted: %d %s", w.Code, w.Body.String())
+			}
+			if _, err := h.store.GetShip(ctx, ship.ID); err != nil {
+				t.Fatalf("registration removed: %v", err)
+			}
+			if _, err := os.Stat(filepath.Join(ship.PierPath, "pier-data")); err != nil {
+				t.Fatalf("pier files removed: %v", err)
+			}
+		})
+	}
+}
 
 func removalHandler(t *testing.T) (*Server, model.Ship) {
 	t.Helper()

@@ -57,6 +57,9 @@ func (e *Executor) Submit(ctx context.Context, r model.JobRequest) (model.ID, er
 	if err != nil {
 		return "", err
 	}
+	if ship.PierDeletionIdentity != "" {
+		return "", errors.New("Pier deletion is pending. Confirm permanent deletion again to finish removal.")
+	}
 	if ship.RecoveryBlocked && r.Kind != "backup" {
 		return "", errors.New(ship.RecoveryBlockReason)
 	}

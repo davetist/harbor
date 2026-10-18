@@ -7,9 +7,27 @@ import (
 	"context"
 	"encoding/xml"
 	"errors"
+	"golang.org/x/sys/unix"
 	"io"
 	"os/exec"
 )
+
+func mountPoints() ([]string, error) {
+	n, err := unix.Getfsstat(nil, unix.MNT_NOWAIT)
+	if err != nil {
+		return nil, err
+	}
+	buf := make([]unix.Statfs_t, n+16)
+	n, err = unix.Getfsstat(buf, unix.MNT_NOWAIT)
+	if err != nil || n >= len(buf) {
+		return nil, errors.New("mount metadata could not be read completely")
+	}
+	points := make([]string, 0, n)
+	for _, entry := range buf[:n] {
+		points = append(points, unix.ByteSliceToString(entry.Mntonname[:]))
+	}
+	return points, nil
+}
 
 func parseDiskInfo(b []byte) (volumeInfo, error) {
 	if len(b) > 1<<20 {

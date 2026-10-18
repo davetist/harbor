@@ -19,6 +19,9 @@ func (e *Executor) VerifyAndReleaseHold(ctx context.Context, id model.ID) error 
 	if err != nil {
 		return err
 	}
+	if ship.PierDeletionIdentity != "" {
+		return errors.New("Pier deletion is pending. Confirm permanent deletion again to finish removal.")
+	}
 	if !ship.RecoveryBlocked {
 		return nil
 	}

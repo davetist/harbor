@@ -38,6 +38,27 @@ passed on all four native targets on 13 October 2026. Its downloaded reports
 confirmed every lifecycle check and graceful service exit; see
 [validation](validation.md#first-named-alpha-release-pass--2026-10-13) for revision and scope.
 
+## Ship removal
+
+`web/e2e/removal.spec.ts` covers default preservation, the unchecked permanent
+deletion option, warnings, confirmation, cancellation, errors, accessibility and
+narrow layouts with API fixtures. For actual file deletion, first run native
+acceptance in a new private `harbor-removal-native-UNIQUE` output directory. Once
+that trial has completed and its manager has exited, start the current runner
+with the trial's `config.json` and supply its new loopback URL:
+
+```sh
+HARBOR_REMOVAL_URL=http://127.0.0.1:ACTUAL_PORT \
+  npm --prefix web run test:e2e -- removal-native.spec.ts --workers=1
+```
+
+The test refuses an installed service or a registry outside this explicit trial
+marker. It requires stopped disposable comets with closed process records,
+removes one while preserving its pier, registers it again, cancels permanent
+removal, then confirms actual deletion. It verifies shared runtimes, other piers
+and the hashes of every tracked export remain intact. Stop the disposable manager
+gracefully afterward, check its writers exited and remove only the trial data.
+
 ## Web response recovery
 
 `web/e2e/web-recovery.spec.ts` covers unresponsive Open, explicit confirmation,

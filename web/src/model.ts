@@ -1,6 +1,6 @@
 export type ShipState = 'stopped' | 'starting' | 'running' | 'stopping' | 'maintaining' | 'externally_running' | 'failed'
 export type Operation = 'start' | 'stop' | 'pack' | 'meld' | 'roll' | 'chop' | 'update' | 'replay' | 'backup'
-export interface Ship { id: string; identity?: string; name: string; nickname: string; pierPath: string; runtimePath: string; loomExponent: number; httpBindAddress: string; webPort: number; desiredRunning: boolean; recoveryBlocked: boolean; recoveryBlockReason: string; state: ShipState; error: string; pierBytes?: number; measuredAt?: string; runtimeVersion?: string }
+export interface Ship { id: string; identity?: string; name: string; nickname: string; pierPath: string; pierDeletionIdentity?: string; runtimePath: string; loomExponent: number; httpBindAddress: string; webPort: number; desiredRunning: boolean; recoveryBlocked: boolean; recoveryBlockReason: string; state: ShipState; error: string; pierBytes?: number; measuredAt?: string; runtimeVersion?: string }
 export interface Host { hostname: string; harborVersion?: string; platform: string; dataDir: string; pierRoot?: string; allowedRoots?: string[]; timezone: string; loomSizes: number[]; defaultShipHTTPBindAddress: string; maintenanceProfile: string; maintenanceValidated: boolean }
 export interface HarborUpdate { currentVersion: string; latestVersion: string; comparisonKnown: boolean; available: boolean; prerelease: boolean; releaseURL: string; checkedAt: string | null; error?: string }
 export interface Schedule { id: string; shipId: string; kind: Operation; intervalDays: number; localTime: string; timezone: string; enabled: boolean; nextDue: string; lastResult: string; afterScheduleId?: string; anchorDate?: string }
@@ -18,7 +18,7 @@ export interface HarborClient {
   host(): Promise<Host>; listShips(): Promise<Ship[]>; ship(id: string): Promise<Ship>;
   measurePier(id: string): Promise<Ship>;
   updates(manual?: boolean): Promise<HarborUpdate>;
-  removeShip(id: string): Promise<void>;
+  removeShip(id: string, options?: { deletePier: boolean; confirmPierPath: string }): Promise<void>;
   boot(request: BootRequest, file?: File): Promise<string>; action(id: string, operation: Operation): Promise<string>;
   job(id: string): Promise<Job>; schedules(id: string): Promise<Schedule[]>; saveSchedule(schedule: Schedule): Promise<void>;
   resize(id: string, rows: number, cols: number): Promise<void>; logs(id: string): Promise<string>; input(id: string, command: string): Promise<void>; accessCode(id: string): Promise<string>;

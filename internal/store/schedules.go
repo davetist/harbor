@@ -55,6 +55,13 @@ func (s *Store) putSchedule(ctx context.Context, v model.Schedule, next func(mod
 		return e
 	}
 	defer tx.Rollback()
+	var deleting bool
+	if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM ships WHERE id=? AND COALESCE(json_extract(payload,'$.pierDeletionIdentity'),'')!='')", v.ShipID).Scan(&deleting); e != nil {
+		return e
+	}
+	if deleting {
+		return errors.New("maintenance stays paused while pier deletion is pending")
+	}
 	syncCadence := func(other *model.Schedule) error {
 		if next == nil {
 			return nil
