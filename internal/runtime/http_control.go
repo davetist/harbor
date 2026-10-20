@@ -36,7 +36,8 @@ func loopbackControlURL(pier string) (string, error) {
 			continue
 		}
 		n, e := strconv.Atoi(parts[0])
-		if e != nil || n < 1 || n > 65535 || parts[1] != "insecure" || port != 0 {
+		// Repeated declarations of the same listener are unambiguous.
+		if e != nil || n < 1 || n > 65535 || parts[1] != "insecure" || (port != 0 && port != n) {
 			return "", errors.New("invalid private HTTP control port")
 		}
 		port = n
